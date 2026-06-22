@@ -1,0 +1,112 @@
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import api from "../utils/api";
+
+export interface DespachoOrder {
+  client_name: string | null;
+  client_phone: string | null;
+  address: string | null;
+  district: string | null;
+  reference: string | null;
+  total: number;
+  metodo_pago: string | null;
+  lat: number | null;
+  lng: number | null;
+  note: string | null;
+  items: Array<{ name?: string; qty?: number }>;
+}
+
+export interface DespachoItem {
+  id: number;
+  restaurant_id: number;
+  restaurant: string | null;
+  order_id: number;
+  estado: string;
+  comision_motorizado: number;
+  monto_cobrado: number | null;
+  nota_motorizado: string | null;
+  solicitado_at: string | null;
+  aceptado_at: string | null;
+  recogido_at: string | null;
+  entregado_at: string | null;
+  order: DespachoOrder;
+  motorizado: {
+    id: number;
+    nombre: string;
+    telefono: string;
+    foto: string | null;
+  } | null;
+}
+
+interface Stats {
+  total_activos: number;
+  entregados_hoy: number;
+  motorizados_ocupados: number;
+  motorizados_disponibles: number;
+}
+
+export const useDespachosStore = defineStore("despachos", () => {
+  const activos = ref<DespachoItem[]>([]);
+  const entregadosHoy = ref<DespachoItem[]>([]);
+  const stats = ref<Stats>({
+    total_activos: 0,
+    entregados_hoy: 0,
+    motorizados_ocupados: 0,
+    motorizados_disponibles: 0,
+  });
+  const loading = ref(false);
+
+  async function fetchAll(restaurantId?: number) {
+    loading.value = true;
+    try {
+      const { data } = await api.get("/admin/despachos", {
+        params: restaurantId ? { restaurant_id: restaurantId } : {},
+      });
+      activos.value = data.data.activos;
+      entregadosHoy.value = data.data.entregados_hoy;
+      stats.value = data.data.stats;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function cancelar(id: number): Promise<boolean> {
+    try {
+      await api.post(`/admin/despachos/${id}/cancelar`);
+      activos.value = activos.value.filter((d) => d.id !== id);
+      stats.value.total_activos = activos.value.length;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function handleRealtimeUpdate(payload: any) {
+    if (payload.estado === "entregado" || payload.estado === "cancelado") {
+      activos.value = activos.value.filter((d) => d.id !== payload.despacho_id);
+      stats.value.total_activos = activos.value.length;
+      if (payload.estado === "entregado") fetchAll();
+    } else {
+      const idx = activos.value.findIndex((d) => d.id === payload.despacho_id);
+      if (idx !== -1) {
+        activos.value[idx] = {
+          ...activos.value[idx],
+          estado: payload.estado,
+          motorizado: payload.motorizado ?? activos.value[idx].motorizado,
+        };
+      } else {
+        fetchAll();
+      }
+    }
+  }
+
+  return {
+    activos,
+    entregadosHoy,
+    stats,
+    loading,
+    fetchAll,
+    cancelar,
+    handleRealtimeUpdate,
+  };
+});
