@@ -28,10 +28,26 @@ Route::prefix('v1/motorizado')->group(function () {
     Route::post('auth/login', [DespachoController::class, 'login'])
         ->middleware('throttle:10,1');
 
+    // ↓ NUEVO — recuperar contraseña (público, no requiere sesión)
+    Route::post('auth/forgot-password', [DespachoController::class, 'forgotPassword'])
+        ->middleware('throttle:5,1');
+    Route::post('auth/reset-password', [DespachoController::class, 'resetPassword'])
+        ->middleware('throttle:5,1');
+
+    // ↓ NUEVO — el enlace del correo de verificación llega aquí directo,
+    // no pasa por el SPA. Protegido por firma (signed), no por Sanctum.
+    Route::get('auth/verify-email/{id}/{hash}', [DespachoController::class, 'verifyEmail'])
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('motorizado.verification.verify');
+
     Route::middleware(['auth:sanctum', 'throttle:120,1'])->group(function () {
         Route::post('auth/logout', [DespachoController::class, 'logout']);
         Route::get('me', [DespachoController::class, 'me']);
         Route::put('perfil', [DespachoController::class, 'updatePerfil']);
+
+        // ↓ NUEVO — reenviar correo de verificación (requiere estar logueado)
+        Route::post('auth/resend-verification', [DespachoController::class, 'resendVerification'])
+            ->middleware('throttle:3,1');
 
         Route::patch('estado', [DespachoController::class, 'updateEstado']);
         Route::patch('ubicacion', [DespachoController::class, 'updateUbicacion']);

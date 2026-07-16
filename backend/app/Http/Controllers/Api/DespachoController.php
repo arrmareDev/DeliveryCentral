@@ -10,10 +10,12 @@ use App\Models\ComisionMotorizado;
 use App\Models\ConfiguracionCentral;
 use App\Models\Despacho;
 use App\Models\Motorizado;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 
 
@@ -136,6 +138,8 @@ class DespachoController extends Controller
             'activo'     => false,
         ]);
 
+        $motorizado->sendEmailVerificationNotification();
+
         $token = $motorizado->createToken('motorizado')->plainTextToken;
 
         return $this->created([
@@ -173,6 +177,88 @@ class DespachoController extends Controller
         return $this->success(null, 'Sesión cerrada');
     }
 
+    // POST /v1/motorizado/auth/forgot-password
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        // Siempre respondemos 200 con el mismo mensaje, exista o no el
+        // correo — así no revelamos qué correos están registrados.
+        Password::broker('motorizados')->sendResetLink(
+            $data,
+        );
+
+        return $this->success(
+            null,
+            'Si el correo está registrado, te enviamos un enlace para recuperar tu contraseña.',
+        );
+    }
+
+    // POST /v1/motorizado/auth/reset-password
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'token'                 => 'required|string',
+            'email'                 => 'required|email',
+            'password'              => 'required|string|min:6|confirmed',
+        ]);
+
+        $status = Password::broker('motorizados')->reset(
+            $data,
+            function (Motorizado $motorizado, string $password) {
+                $motorizado->forceFill([
+                    'password' => Hash::make($password),
+                ])->save();
+            },
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            return $this->error(
+                $status === Password::INVALID_TOKEN
+                    ? 'El enlace no es válido o ya expiró'
+                    : 'No se pudo restablecer la contraseña',
+                422,
+            );
+        }
+
+        return $this->success(null, 'Contraseña actualizada correctamente');
+    }
+
+    // POST /v1/motorizado/auth/resend-verification  (auth: sanctum)
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $motorizado = $request->user();
+
+        if ($motorizado->hasVerifiedEmail()) {
+            return $this->success(null, 'Tu correo ya estaba verificado');
+        }
+
+        $motorizado->sendEmailVerificationNotification();
+
+        return $this->success(null, 'Te reenviamos el correo de confirmación');
+    }
+
+    // GET /v1/motorizado/auth/verify-email/{id}/{hash}  (firmada, sin auth)
+    // Este endpoint lo abre el correo del usuario directamente — no el SPA.
+    public function verifyEmail(Request $request, int $id, string $hash): \Illuminate\Http\RedirectResponse
+    {
+        $frontend = rtrim(config('app.frontend_url'), '/');
+        $motorizado = Motorizado::find($id);
+
+        if (!$motorizado || !hash_equals($hash, sha1($motorizado->getEmailForVerification()))) {
+            return redirect("{$frontend}/login?verified=0");
+        }
+
+        if (!$motorizado->hasVerifiedEmail()) {
+            $motorizado->markEmailAsVerified();
+            event(new Verified($motorizado));
+        }
+
+        return redirect("{$frontend}/login?verified=1");
+    }
+
     // GET /v1/motorizado/me
     public function me(Request $request): JsonResponse
     {
@@ -187,6 +273,10 @@ class DespachoController extends Controller
         ]);
 
         $motorizado = $request->user();
+
+        if ($data['estado'] === 'disponible' && !$motorizado->hasVerifiedEmail()) {
+            return $this->error('Debes confirmar tu correo antes de recibir pedidos', 403);
+        }
 
         if ($data['estado'] === 'disponible' && !$motorizado->verificado) {
             return $this->error('Tu cuenta aún no ha sido verificada', 403);
@@ -282,6 +372,10 @@ class DespachoController extends Controller
     public function aceptar(Request $request, int $id): JsonResponse
     {
         $motorizado = $request->user();
+
+        if (!$motorizado->hasVerifiedEmail()) {
+            return $this->error('Debes confirmar tu correo antes de recibir pedidos', 403);
+        }
 
         if (!$motorizado->verificado) {
             return $this->error('Tu cuenta no está verificada', 403);
@@ -550,17 +644,18 @@ class DespachoController extends Controller
     private function formatMotorizado(Motorizado $m, bool $withStats = false): array
     {
         $data = [
-            'id'          => $m->id,
-            'nombre'      => $m->nombre,
-            'telefono'    => $m->telefono,
-            'email'       => $m->email,
-            'foto'        => $m->foto,
-            'estado'      => $m->estado,
-            'verificado'  => $m->verificado,
-            'activo'      => $m->activo,
-            'lat'         => $m->lat,
-            'lng'         => $m->lng,
-            'ultimo_ping' => $m->ultimo_ping?->toISOString(),
+            'id'                => $m->id,
+            'nombre'            => $m->nombre,
+            'telefono'          => $m->telefono,
+            'email'             => $m->email,
+            'foto'              => $m->foto,
+            'estado'            => $m->estado,
+            'verificado'        => $m->verificado,
+            'activo'            => $m->activo,
+            'lat'               => $m->lat,
+            'lng'               => $m->lng,
+            'ultimo_ping'       => $m->ultimo_ping?->toISOString(),
+            'email_verificado'  => $m->hasVerifiedEmail(),
         ];
 
         if ($withStats) {

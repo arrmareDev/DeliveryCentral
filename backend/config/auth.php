@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Motorizado;
 use App\Models\User;
 
 return [
@@ -34,6 +35,11 @@ return [
     | system used by the application. Typically, Eloquent is utilized.
     |
     | Supported: "session"
+    |
+    | Nota: a los motorizados NO los autenticamos con un guard de aquí —
+    | usan Sanctum directamente (auth:sanctum + $request->user()), igual
+    | que ya lo tienes funcionando. El "provider" de abajo (`motorizados`)
+    | solo hace falta para el broker de recuperación de contraseña.
     |
     */
 
@@ -71,6 +77,13 @@ return [
         //     'driver' => 'database',
         //     'table' => 'users',
         // ],
+
+        // ↓ NUEVO — necesario para que Password::broker('motorizados')
+        // sepa en qué tabla/modelo buscar al usuario por su email.
+        'motorizados' => [
+            'driver' => 'eloquent',
+            'model' => Motorizado::class,
+        ],
     ],
 
     /*
@@ -96,6 +109,16 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        // ↓ NUEVO — broker separado para motorizados, con su propia
+        // tabla de tokens (ver migración motorizado_password_reset_tokens)
+        // para no mezclarlos con los del panel admin.
+        'motorizados' => [
+            'provider' => 'motorizados',
+            'table' => 'motorizado_password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],

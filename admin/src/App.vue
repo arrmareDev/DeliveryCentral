@@ -4,5 +4,5 @@
 </template>
 
 <script setup lang="ts">
-import ToastNotification from '../src/components/ToastNotification.vue'
+import ToastNotification from './components/ToastNotification.vue'
 </script>

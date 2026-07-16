@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL (SPA)
+    |--------------------------------------------------------------------------
+    |
+    | El dominio donde vive el frontend de Vue (AppDelivery). Se usa para
+    | armar los enlaces de correos que el usuario abre directamente
+    | (recuperar contraseña, verificación de correo) y que deben apuntar
+    | al SPA en vez de a una vista Blade de este backend.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
