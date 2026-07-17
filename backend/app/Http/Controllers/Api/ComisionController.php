@@ -52,7 +52,7 @@ class ComisionController extends Controller
         ]);
     }
 
-    // GET /admin/comisiones/{motorizado_id} — detalle filtrable por rango
+    // GET /admin/comisiones/{motorizado_id} — detalle filtrable por rango, paginado
     public function detalle(Request $request, int $motorizadoId): JsonResponse
     {
         $motorizado = Motorizado::findOrFail($motorizadoId);
@@ -68,26 +68,25 @@ class ComisionController extends Controller
             });
         }
 
-        $comisiones = $query->orderByDesc('created_at')
-            ->get()
-            ->map(fn($c) => [
-                'id'          => $c->id,
-                'despacho_id' => $c->despacho_id,
-                'order_id'    => $c->despacho?->external_order_id,
-                'restaurant'  => $c->despacho?->restaurant?->name,
-                'monto'       => (float) $c->monto,
-                'estado'      => $c->estado,
-                'cobrado_at'  => $c->cobrado_at?->toISOString(),
-                'created_at'  => $c->created_at?->toISOString(),
-            ]);
-
-        // Deuda pendiente del rango filtrado (no la deuda total histórica)
-        $deudaRango = (clone $query)->getQuery()->wheres
-            ? ComisionMotorizado::where('motorizado_id', $motorizadoId)
+        // Deuda pendiente del rango filtrado — se calcula ANTES de paginar,
+        // sobre el total real, no solo sobre la página actual
+        $deudaRango = (clone $query)
             ->where('estado', 'pendiente')
-            ->when($desde && $hasta, fn($q) => $q->whereBetween('created_at', [$desde, $hasta]))
-            ->sum('monto')
-            : $motorizado->deudaPendiente();
+            ->sum('monto');
+
+        $perPage = min((int) $request->query('per_page', 15), 50);
+        $paginated = $query->orderByDesc('created_at')->paginate($perPage);
+
+        $comisiones = collect($paginated->items())->map(fn($c) => [
+            'id'          => $c->id,
+            'despacho_id' => $c->despacho_id,
+            'order_id'    => $c->despacho?->external_order_id,
+            'restaurant'  => $c->despacho?->restaurant?->name,
+            'monto'       => (float) $c->monto,
+            'estado'      => $c->estado,
+            'cobrado_at'  => $c->cobrado_at?->toISOString(),
+            'created_at'  => $c->created_at?->toISOString(),
+        ]);
 
         return $this->success([
             'motorizado'      => [
@@ -97,6 +96,12 @@ class ComisionController extends Controller
             'deuda_pendiente' => (float) $deudaRango,
             'deuda_total'     => (float) $motorizado->deudaPendiente(),
             'comisiones'      => $comisiones,
+            'meta'            => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'total'        => $paginated->total(),
+                'per_page'     => $paginated->perPage(),
+            ],
             'rango'           => ['desde' => $desde?->toDateString(), 'hasta' => $hasta?->toDateString()],
         ]);
     }

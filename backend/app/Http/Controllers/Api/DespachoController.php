@@ -10,6 +10,7 @@ use App\Models\ComisionMotorizado;
 use App\Models\ConfiguracionCentral;
 use App\Models\Despacho;
 use App\Models\Motorizado;
+use App\Models\NotificacionAdmin;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Carbon;
 
 
 class DespachoController extends Controller
@@ -72,6 +74,13 @@ class DespachoController extends Controller
 
         broadcast(new PedidoDisponible($despacho));
 
+        NotificacionAdmin::crear(
+            'nuevo_despacho',
+            'Nuevo pedido solicitado',
+            "{$restaurant->name} solicitó un despacho para el pedido #{$data['order_id']}",
+            ['despacho_id' => $despacho->id, 'restaurant_id' => $restaurant->id],
+        );
+
         return $this->created($this->formatDespacho($despacho), 'Despacho solicitado');
     }
 
@@ -111,6 +120,13 @@ class DespachoController extends Controller
 
         broadcast(new DespachoActualizado($despacho));
 
+        NotificacionAdmin::crear(
+            'despacho_cancelado',
+            'Restaurante canceló un pedido',
+            "{$restaurant->name} canceló el pedido #{$orderId}",
+            ['despacho_id' => $despacho->id],
+        );
+
         return $this->success($this->formatDespacho($despacho), 'Despacho cancelado');
     }
 
@@ -122,23 +138,65 @@ class DespachoController extends Controller
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'nombre'   => 'required|string|max:150',
-            'telefono' => 'required|string|max:20',
-            'email'    => 'required|email|unique:motorizados,email',
-            'password' => 'required|string|min:6',
+            'dni'               => 'required|string|max:15|unique:motorizados,dni',
+            'nombres'           => 'required|string|max:100',
+            'apellidos'         => 'required|string|max:100',
+            'fecha_nacimiento'  => 'required|date|before:-18 years',
+            'telefono'          => 'required|string|max:20',
+            'email'             => 'required|email|unique:motorizados,email',
+            'password'          => 'required|string|min:6',
+
+            'placa'             => 'required|string|max:10|unique:motorizados,placa',
+            'marca_vehiculo'    => 'required|string|max:50',
+            'modelo_vehiculo'   => 'required|string|max:50',
+            'anio_vehiculo'     => 'required|integer|min:1990|max:' . (date('Y') + 1),
+            'foto_vehiculo'     => 'required|image|max:5120',
+            'soat_numero'       => 'nullable|string|max:30',
+        ], [
+            'fecha_nacimiento.before' => 'Debes ser mayor de 18 años para registrarte',
         ]);
+
+        $fotoPath = $request->file('foto_vehiculo')->store('vehiculos', 'public');
 
         $motorizado = Motorizado::create([
-            'nombre'     => $data['nombre'],
-            'telefono'   => $data['telefono'],
-            'email'      => $data['email'],
-            'password'   => Hash::make($data['password']),
-            'estado'     => 'inactivo',
-            'verificado' => false,
-            'activo'     => false,
+            'nombre'            => "{$data['nombres']} {$data['apellidos']}",
+            'nombres'           => $data['nombres'],
+            'apellidos'         => $data['apellidos'],
+            'dni'               => $data['dni'],
+            'fecha_nacimiento'  => $data['fecha_nacimiento'],
+            'telefono'          => $data['telefono'],
+            'email'             => $data['email'],
+            'password'          => Hash::make($data['password']),
+            'placa'             => strtoupper($data['placa']),
+            'marca_vehiculo'    => $data['marca_vehiculo'],
+            'modelo_vehiculo'   => $data['modelo_vehiculo'],
+            'anio_vehiculo'     => $data['anio_vehiculo'],
+            'foto_vehiculo'     => $fotoPath,
+            'soat_numero'       => $data['soat_numero'] ?? null,
+            'estado'            => 'inactivo',
+            'verificado'        => false,
+            'activo'            => false,
         ]);
 
-        $motorizado->sendEmailVerificationNotification();
+        // ↓ Envuelto en try/catch — si el correo falla (ej. Resend suspendido
+        // en revisión), el registro se completa igual. El motorizado puede
+        // reenviar el correo de verificación más tarde desde la app.
+        try {
+            $motorizado->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        try {
+            NotificacionAdmin::crear(
+                'motorizado_pendiente',
+                'Nuevo motorizado registrado',
+                "{$motorizado->nombre} ({$motorizado->placa}) se registró y espera verificación",
+                ['motorizado_id' => $motorizado->id],
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         $token = $motorizado->createToken('motorizado')->plainTextToken;
 
@@ -184,8 +242,6 @@ class DespachoController extends Controller
             'email' => 'required|email',
         ]);
 
-        // Siempre respondemos 200 con el mismo mensaje, exista o no el
-        // correo — así no revelamos qué correos están registrados.
         Password::broker('motorizados')->sendResetLink(
             $data,
         );
@@ -241,7 +297,6 @@ class DespachoController extends Controller
     }
 
     // GET /v1/motorizado/auth/verify-email/{id}/{hash}  (firmada, sin auth)
-    // Este endpoint lo abre el correo del usuario directamente — no el SPA.
     public function verifyEmail(Request $request, int $id, string $hash): \Illuminate\Http\RedirectResponse
     {
         $frontend = rtrim(config('app.frontend_url'), '/');
@@ -304,7 +359,6 @@ class DespachoController extends Controller
             'password'         => 'sometimes|string|min:6|confirmed',
         ]);
 
-        // Si quiere cambiar contraseña, validar la actual primero
         if (!empty($data['password'])) {
             if (!Hash::check($data['password_actual'], $motorizado->password)) {
                 return $this->error('La contraseña actual es incorrecta', 422);
@@ -466,7 +520,6 @@ class DespachoController extends Controller
         if ($data['estado'] === 'entregado') {
             $motorizado->update(['estado' => 'disponible']);
 
-            // ── Generar comisión que el motorizado te debe ──
             ComisionMotorizado::create([
                 'despacho_id'   => $despacho->id,
                 'motorizado_id' => $motorizado->id,
@@ -537,15 +590,49 @@ class DespachoController extends Controller
     // GET /admin/motorizados
     public function motorizados(Request $request): JsonResponse
     {
-        $query = Motorizado::orderByDesc('created_at');
+        $query = Motorizado::query();
 
-        if ($request->has('verificado')) {
-            $query->where('verificado', $request->boolean('verificado'));
+        // Búsqueda por nombre, teléfono, DNI o placa
+        if ($request->filled('buscar')) {
+            $term = $request->query('buscar');
+            $query->where(function ($q) use ($term) {
+                $q->where('nombre', 'ilike', "%{$term}%")
+                    ->orWhere('telefono', 'ilike', "%{$term}%")
+                    ->orWhere('dni', 'ilike', "%{$term}%")
+                    ->orWhere('placa', 'ilike', "%{$term}%");
+            });
         }
 
-        $motorizados = $query->get()->map(fn($m) => $this->formatMotorizado($m, true));
+        // Filtro por estado de verificación
+        $filtroEstado = $request->query('filtro_estado');
+        if ($filtroEstado === 'pendiente') {
+            $query->where('verificado', false);
+        } elseif ($filtroEstado === 'verificado') {
+            $query->where('verificado', true)->where('activo', true);
+        } elseif ($filtroEstado === 'inactivo') {
+            $query->where('verificado', true)->where('activo', false);
+        }
 
-        return $this->success($motorizados);
+        $query->orderByDesc('created_at');
+
+        $perPage = min((int) $request->query('per_page', 10), 50);
+        $paginated = $query->paginate($perPage);
+
+        return $this->success([
+            'data' => collect($paginated->items())->map(fn($m) => $this->formatMotorizado($m, true)),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'total'        => $paginated->total(),
+                'per_page'     => $paginated->perPage(),
+            ],
+            'stats' => [
+                'total'        => Motorizado::count(),
+                'verificados'  => Motorizado::where('verificado', true)->count(),
+                'disponibles'  => Motorizado::where('estado', 'disponible')->count(),
+                'pendientes'   => Motorizado::where('verificado', false)->count(),
+            ],
+        ]);
     }
 
     // PATCH /admin/motorizados/{id}/verificar
@@ -581,10 +668,17 @@ class DespachoController extends Controller
     }
 
     // POST /admin/despachos/{id}/cancelar
-    public function cancelar(int $id): JsonResponse
+    public function cancelar(Request $request, int $id): JsonResponse
     {
+        $data = $request->validate([
+            'motivo' => 'required|string|max:255',
+        ]);
+
         $despacho = Despacho::with('restaurant')->findOrFail($id);
-        $despacho->update(['estado' => 'cancelado']);
+        $despacho->update([
+            'estado'             => 'cancelado',
+            'motivo_cancelacion' => $data['motivo'],
+        ]);
 
         if ($despacho->motorizado_id) {
             Motorizado::where('id', $despacho->motorizado_id)
@@ -592,6 +686,14 @@ class DespachoController extends Controller
         }
 
         broadcast(new DespachoActualizado($despacho));
+
+        NotificacionAdmin::crear(
+            'despacho_cancelado',
+            'Despacho cancelado',
+            "Pedido #{$despacho->external_order_id} cancelado: {$data['motivo']}",
+            ['despacho_id' => $despacho->id],
+        );
+
         NotifyRestaurantWebhook::dispatch($despacho);
 
         return $this->success($this->formatDespacho($despacho), 'Despacho cancelado');
@@ -611,6 +713,7 @@ class DespachoController extends Controller
             'restaurant'          => $d->restaurant?->name,
             'order_id'            => $d->external_order_id,
             'estado'              => $d->estado,
+            'motivo_cancelacion'  => $d->motivo_cancelacion,
             'comision_motorizado' => (float) $d->comision_motorizado,
             'monto_cobrado'       => $d->monto_cobrado !== null ? (float) $d->monto_cobrado : null,
             'nota_motorizado'     => $d->nota_motorizado,
@@ -640,12 +743,63 @@ class DespachoController extends Controller
         ];
     }
 
+    // GET /admin/despachos/historial — historial completo, paginado y filtrable
+    public function historialCentral(Request $request): JsonResponse
+    {
+        $query = Despacho::with(['restaurant', 'motorizado']);
+
+        if ($request->filled('desde') && $request->filled('hasta')) {
+            $desde = Carbon::parse($request->query('desde'))->startOfDay();
+            $hasta = Carbon::parse($request->query('hasta'))->endOfDay();
+            $query->whereBetween('created_at', [$desde, $hasta]);
+        }
+
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->query('estado'));
+        }
+
+        if ($request->filled('restaurant_id')) {
+            $query->where('restaurant_id', $request->query('restaurant_id'));
+        }
+
+        if ($request->filled('motorizado_id')) {
+            $query->where('motorizado_id', $request->query('motorizado_id'));
+        }
+
+        if ($request->filled('buscar')) {
+            $term = $request->query('buscar');
+            $query->where(function ($q) use ($term) {
+                $q->where('external_order_id', 'ilike', "%{$term}%")
+                    ->orWhereRaw("order_data->>'client_name' ilike ?", ["%{$term}%"]);
+            });
+        }
+
+        $sortDir = $request->query('sort_dir', 'desc') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy('created_at', $sortDir);
+
+        $perPage = min((int) $request->query('per_page', 15), 50);
+        $paginated = $query->paginate($perPage);
+
+        return $this->success([
+            'data' => collect($paginated->items())->map(fn($d) => $this->formatDespacho($d)),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'total'        => $paginated->total(),
+                'per_page'     => $paginated->perPage(),
+            ],
+        ]);
+    }
 
     private function formatMotorizado(Motorizado $m, bool $withStats = false): array
     {
         $data = [
             'id'                => $m->id,
             'nombre'            => $m->nombre,
+            'nombres'           => $m->nombres,
+            'apellidos'         => $m->apellidos,
+            'dni'               => $m->dni,
+            'fecha_nacimiento'  => $m->fecha_nacimiento?->toDateString(),
             'telefono'          => $m->telefono,
             'email'             => $m->email,
             'foto'              => $m->foto,
@@ -656,12 +810,18 @@ class DespachoController extends Controller
             'lng'               => $m->lng,
             'ultimo_ping'       => $m->ultimo_ping?->toISOString(),
             'email_verificado'  => $m->hasVerifiedEmail(),
+            'placa'             => $m->placa,
+            'marca_vehiculo'    => $m->marca_vehiculo,
+            'modelo_vehiculo'   => $m->modelo_vehiculo,
+            'anio_vehiculo'     => $m->anio_vehiculo,
+            'foto_vehiculo'     => $m->foto_vehiculo ? asset('storage/' . $m->foto_vehiculo) : null,
+            'soat_numero'       => $m->soat_numero,
         ];
 
         if ($withStats) {
             $data['stats'] = [
-                'total_entregas' => $m->despachos()->where('estado', 'entregado')->count(),
-                'entregas_hoy'   => $m->despachosHoy()->count(),
+                'total_entregas'  => $m->despachos()->where('estado', 'entregado')->count(),
+                'entregas_hoy'    => $m->despachosHoy()->count(),
                 'deuda_pendiente' => (float) $m->deudaPendiente(),
             ];
         }

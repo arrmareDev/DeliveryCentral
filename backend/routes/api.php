@@ -4,6 +4,10 @@ use App\Http\Controllers\Api\ComisionController;
 use App\Http\Controllers\Api\DespachoController;
 use App\Http\Controllers\Api\RestaurantController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\ReportesController;
+use App\Http\Controllers\Api\NotificacionController;
+use App\Http\Controllers\Api\BusquedaController;
 
 // ══════════════════════════════════════════════════════════
 // ── RESTAURANTES — autenticados con API key ─────────────────
@@ -60,6 +64,8 @@ Route::prefix('v1/motorizado')->group(function () {
         Route::patch('despachos/{id}/estado', [DespachoController::class, 'updateEstadoDespacho'])
             ->where('id', '[0-9]+');
 
+        // Historial PERSONAL del motorizado (sus propias entregas) —
+        // no confundir con el historial global del panel admin de abajo.
         Route::get('historial', [DespachoController::class, 'historial']);
     });
 });
@@ -85,6 +91,12 @@ Route::prefix('v1/admin')
 
         // Despachos globales
         Route::get('despachos', [DespachoController::class, 'index']);
+
+        // Historial GLOBAL del panel admin (todos los restaurantes/motorizados) —
+        // método distinto al de arriba (historialCentral, no historial), porque
+        // ya existía un método `historial()` para el motorizado individual.
+        Route::get('despachos/historial', [DespachoController::class, 'historialCentral']);
+
         Route::post('despachos/{id}/cancelar', [DespachoController::class, 'cancelar'])
             ->where('id', '[0-9]+');
 
@@ -104,6 +116,22 @@ Route::prefix('v1/admin')
         // Configuración
         Route::get('config', [ComisionController::class, 'getConfig']);
         Route::put('config', [ComisionController::class, 'updateConfig']);
+
+        Route::get('analytics/dashboard', [AnalyticsController::class, 'dashboard']);
+
+        Route::get('reportes/despachos/pdf', [ReportesController::class, 'despachosPdf']);
+        Route::get('reportes/despachos/excel', [ReportesController::class, 'despachosExcel']);
+        Route::get('reportes/comisiones/pdf', [ReportesController::class, 'comisionesPdf']);
+        Route::get('reportes/comisiones/excel', [ReportesController::class, 'comisionesExcel']);
+
+        Route::get('notificaciones', [NotificacionController::class, 'index']);
+        Route::patch('notificaciones/{id}/leer', [NotificacionController::class, 'leer'])
+            ->where('id', '[0-9]+');
+        Route::patch('notificaciones/leer-todas', [NotificacionController::class, 'leerTodas']);
+
+        //Buscar general
+        Route::get('buscar', [BusquedaController::class, 'index']);
+
     });
 
 // ══════════════════════════════════════════════════════════

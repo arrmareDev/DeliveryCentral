@@ -1,6 +1,13 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
+/* ══════════════════════════════════════════════════════════
+   Habilita el modo oscuro por CLASE (.dark en <html>) en vez
+   del prefers-color-scheme del sistema operativo. Así el toggle
+   manual del usuario manda, no solo la preferencia del SO.
+   ══════════════════════════════════════════════════════════ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand-primary: #2563eb;
   --color-brand-primary-dark: #1d4ed8;
@@ -11,6 +18,12 @@
 body {
   font-family: "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
+  background: #f9fafb;
+  transition: background-color 0.2s ease;
+}
+
+.dark body {
+  background: #0f1117;
 }
 
 * {
@@ -25,6 +38,10 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
 }
 
 .scrollbar-none::-webkit-scrollbar {

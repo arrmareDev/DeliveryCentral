@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "../utils/api";
+import type { PaginationMeta } from "./restaurants";
 
 export interface MotorizadoStats {
   total_entregas: number;
@@ -19,17 +20,52 @@ export interface MotorizadoItem {
   activo: boolean;
   ultimo_ping: string | null;
   stats?: MotorizadoStats;
+  dni?: string;
+  fecha_nacimiento?: string;
+  placa?: string;
+  marca_vehiculo?: string;
+  modelo_vehiculo?: string;
+  anio_vehiculo?: number;
+  foto_vehiculo?: string | null;
+  soat_numero?: string | null;
+}
+
+export interface MotorizadosGlobalStats {
+  total: number;
+  verificados: number;
+  disponibles: number;
+  pendientes: number;
 }
 
 export const useMotorizadosStore = defineStore("motorizados", () => {
   const motorizados = ref<MotorizadoItem[]>([]);
+  const meta = ref<PaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 10,
+  });
+  const stats = ref<MotorizadosGlobalStats>({
+    total: 0,
+    verificados: 0,
+    disponibles: 0,
+    pendientes: 0,
+  });
   const loading = ref(false);
 
-  async function fetchAll() {
+  async function fetchAll(
+    params: {
+      buscar?: string;
+      filtro_estado?: string;
+      page?: number;
+    } = {},
+  ) {
     loading.value = true;
     try {
-      const { data } = await api.get("/admin/motorizados");
-      motorizados.value = data.data;
+      const { data } = await api.get("/admin/motorizados", { params });
+      motorizados.value = data.data.data;
+      meta.value = data.data.meta;
+      stats.value = data.data.stats;
     } finally {
       loading.value = false;
     }
@@ -63,5 +99,13 @@ export const useMotorizadosStore = defineStore("motorizados", () => {
       motorizados.value[idx] = { ...motorizados.value[idx], ...payload };
   }
 
-  return { motorizados, loading, fetchAll, toggleVerificado, toggleActivo };
+  return {
+    motorizados,
+    meta,
+    stats,
+    loading,
+    fetchAll,
+    toggleVerificado,
+    toggleActivo,
+  };
 });

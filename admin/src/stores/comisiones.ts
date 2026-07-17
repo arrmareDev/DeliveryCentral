@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "../utils/api";
+import type { PaginationMeta } from "./restaurants";
 
 export interface ComisionResumen {
   id: number;
@@ -26,11 +27,18 @@ export interface RangoParams {
   preset?: string;
   desde?: string;
   hasta?: string;
+  page?: number;
 }
 
 export const useComisionesStore = defineStore("comisiones", () => {
   const resumen = ref<ComisionResumen[]>([]);
   const detalle = ref<ComisionDetalleItem[]>([]);
+  const detalleMeta = ref<PaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 15,
+  });
   const motorizadoActual = ref<{ id: number; nombre: string } | null>(null);
   const deudaPendiente = ref(0);
   const deudaTotalHistorica = ref(0);
@@ -41,7 +49,6 @@ export const useComisionesStore = defineStore("comisiones", () => {
     loading.value = true;
     try {
       const { data } = await api.get("/admin/comisiones", { params: rango });
-      // El backend ahora devuelve { motorizados, rango } en vez del array directo
       resumen.value = data.data.motorizados ?? data.data;
     } finally {
       loading.value = false;
@@ -59,6 +66,7 @@ export const useComisionesStore = defineStore("comisiones", () => {
       deudaTotalHistorica.value =
         data.data.deuda_total ?? data.data.deuda_pendiente;
       detalle.value = data.data.comisiones;
+      detalleMeta.value = data.data.meta;
     } finally {
       loading.value = false;
     }
@@ -109,6 +117,7 @@ export const useComisionesStore = defineStore("comisiones", () => {
   return {
     resumen,
     detalle,
+    detalleMeta,
     motorizadoActual,
     deudaPendiente,
     deudaTotalHistorica,

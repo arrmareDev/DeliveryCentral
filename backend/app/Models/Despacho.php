@@ -14,6 +14,7 @@ class Despacho extends Model
         'external_order_id',
         'motorizado_id',
         'estado',
+        'motivo_cancelacion',
         'order_data',
         'comision_motorizado',
         'monto_cobrado',

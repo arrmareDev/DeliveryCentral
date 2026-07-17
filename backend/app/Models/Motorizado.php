@@ -27,6 +27,16 @@ class Motorizado extends Authenticatable implements MustVerifyEmailContract
         'lng',
         'ultimo_ping',
         'push_token',
+        'dni',
+        'nombres',
+        'apellidos',
+        'fecha_nacimiento',
+        'placa',
+        'marca_vehiculo',
+        'modelo_vehiculo',
+        'anio_vehiculo',
+        'foto_vehiculo',
+        'soat_numero',
     ];
 
     protected $hidden = ['password'];
@@ -38,6 +48,8 @@ class Motorizado extends Authenticatable implements MustVerifyEmailContract
         'lng'                => 'float',
         'ultimo_ping'        => 'datetime',
         'email_verified_at'  => 'datetime',
+        'fecha_nacimiento'   => 'date',
+        'anio_vehiculo'      => 'integer',
     ];
 
     public function isDisponible(): bool

@@ -11,14 +11,36 @@ use Illuminate\Support\Str;
 class RestaurantController extends Controller
 {
     // GET /admin/restaurants
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $restaurants = Restaurant::withCount('despachos')
-            ->orderByDesc('created_at')
-            ->get()
-            ->map(fn($r) => $this->format($r));
+        $query = Restaurant::withCount('despachos');
 
-        return $this->success($restaurants);
+        if ($request->filled('buscar')) {
+            $query->where('name', 'ilike', '%' . $request->query('buscar') . '%');
+        }
+
+        $sortBy = $request->query('sort_by', 'created_at');
+        $sortDir = $request->query('sort_dir', 'desc');
+
+        $allowedSorts = ['name', 'created_at', 'despachos_count'];
+        if (!in_array($sortBy, $allowedSorts)) {
+            $sortBy = 'created_at';
+        }
+
+        $query->orderBy($sortBy === 'despachos_count' ? 'despachos_count' : $sortBy, $sortDir === 'asc' ? 'asc' : 'desc');
+
+        $perPage = min((int) $request->query('per_page', 12), 50);
+        $paginated = $query->paginate($perPage);
+
+        return $this->success([
+            'data'  => collect($paginated->items())->map(fn($r) => $this->format($r)),
+            'meta'  => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'total'        => $paginated->total(),
+                'per_page'     => $paginated->perPage(),
+            ],
+        ]);
     }
 
     // POST /admin/restaurants

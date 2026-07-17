@@ -14,5 +14,9 @@
         "pusher-js": "^8.5.0",
         "tailwindcss": "^4.0.0",
         "vite": "^8.0.0"
+    },
+    "dependencies": {
+        "apexcharts": "^5.16.0",
+        "vue3-apexcharts": "^1.11.1"
     }
 }

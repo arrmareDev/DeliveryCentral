@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "../utils/api";
+import type { PaginationMeta } from "./restaurants";
 
 export interface DespachoOrder {
   client_name: string | null;
@@ -22,6 +23,7 @@ export interface DespachoItem {
   restaurant: string | null;
   order_id: number;
   estado: string;
+  motivo_cancelacion?: string | null;
   comision_motorizado: number;
   monto_cobrado: number | null;
   nota_motorizado: string | null;
@@ -45,6 +47,17 @@ interface Stats {
   motorizados_disponibles: number;
 }
 
+export interface HistorialParams {
+  desde?: string;
+  hasta?: string;
+  estado?: string;
+  restaurant_id?: number;
+  motorizado_id?: number;
+  buscar?: string;
+  sort_dir?: "asc" | "desc";
+  page?: number;
+}
+
 export const useDespachosStore = defineStore("despachos", () => {
   const activos = ref<DespachoItem[]>([]);
   const entregadosHoy = ref<DespachoItem[]>([]);
@@ -55,6 +68,16 @@ export const useDespachosStore = defineStore("despachos", () => {
     motorizados_disponibles: 0,
   });
   const loading = ref(false);
+
+  // ── Historial (nuevo) ─────────────────────────────────────
+  const historial = ref<DespachoItem[]>([]);
+  const historialMeta = ref<PaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 15,
+  });
+  const historialLoading = ref(false);
 
   async function fetchAll(restaurantId?: number) {
     loading.value = true;
@@ -70,9 +93,20 @@ export const useDespachosStore = defineStore("despachos", () => {
     }
   }
 
-  async function cancelar(id: number): Promise<boolean> {
+  async function fetchHistorial(params: HistorialParams = {}) {
+    historialLoading.value = true;
     try {
-      await api.post(`/admin/despachos/${id}/cancelar`);
+      const { data } = await api.get("/admin/despachos/historial", { params });
+      historial.value = data.data.data;
+      historialMeta.value = data.data.meta;
+    } finally {
+      historialLoading.value = false;
+    }
+  }
+
+  async function cancelar(id: number, motivo: string): Promise<boolean> {
+    try {
+      await api.post(`/admin/despachos/${id}/cancelar`, { motivo });
       activos.value = activos.value.filter((d) => d.id !== id);
       stats.value.total_activos = activos.value.length;
       return true;
@@ -105,7 +139,11 @@ export const useDespachosStore = defineStore("despachos", () => {
     entregadosHoy,
     stats,
     loading,
+    historial,
+    historialMeta,
+    historialLoading,
     fetchAll,
+    fetchHistorial,
     cancelar,
     handleRealtimeUpdate,
   };

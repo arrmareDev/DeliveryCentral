@@ -14,15 +14,36 @@ export interface Restaurant {
   webhook_secret?: string;
 }
 
+export interface PaginationMeta {
+  current_page: number;
+  last_page: number;
+  total: number;
+  per_page: number;
+}
+
 export const useRestaurantsStore = defineStore("restaurants", () => {
   const restaurants = ref<Restaurant[]>([]);
+  const meta = ref<PaginationMeta>({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 12,
+  });
   const loading = ref(false);
 
-  async function fetchAll() {
+  async function fetchAll(
+    params: {
+      buscar?: string;
+      page?: number;
+      sort_by?: string;
+      sort_dir?: "asc" | "desc";
+    } = {},
+  ) {
     loading.value = true;
     try {
-      const { data } = await api.get("/admin/restaurants");
-      restaurants.value = data.data;
+      const { data } = await api.get("/admin/restaurants", { params });
+      restaurants.value = data.data.data;
+      meta.value = data.data.meta;
     } finally {
       loading.value = false;
     }
@@ -44,7 +65,6 @@ export const useRestaurantsStore = defineStore("restaurants", () => {
   }): Promise<{ ok: boolean; data?: Restaurant; message?: string }> {
     try {
       const { data } = await api.post("/admin/restaurants", payload);
-      restaurants.value.unshift(data.data);
       return { ok: true, data: data.data };
     } catch (e: any) {
       return {
@@ -92,6 +112,7 @@ export const useRestaurantsStore = defineStore("restaurants", () => {
 
   return {
     restaurants,
+    meta,
     loading,
     fetchAll,
     getOne,
