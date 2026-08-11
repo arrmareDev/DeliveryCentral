@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "../utils/api";
-import type { PaginationMeta } from "./restaurants";
+import type { PaginationMeta } from "./negocios";
 
 export interface MotorizadoStats {
   total_entregas: number;

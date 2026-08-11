@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Events\DespachoActualizado;
 use App\Events\PedidoDisponible;
 use App\Http\Controllers\Controller;
-use App\Jobs\NotifyRestaurantWebhook;
+use App\Jobs\NotifyNegocioWebhook;
 use App\Models\ComisionMotorizado;
 use App\Models\ConfiguracionCentral;
 use App\Models\Despacho;
@@ -24,13 +24,13 @@ use Illuminate\Support\Carbon;
 class DespachoController extends Controller
 {
     // ════════════════════════════════════════════════════════
-    // ── RESTAURANTE: solicitar despacho ──────────────────────
+    // ── NEGOCIO: solicitar despacho ───────────────────────────
     // ════════════════════════════════════════════════════════
 
-    // POST /v1/despachos/solicitar  (auth: restaurant.auth)
+    // POST /v1/despachos/solicitar  (auth: negocio.auth)
     public function solicitar(Request $request): JsonResponse
     {
-        $restaurant = $request->attributes->get('restaurant');
+        $negocio = $request->attributes->get('negocio');
 
         $data = $request->validate([
             'order_id'              => 'required|integer',
@@ -49,7 +49,7 @@ class DespachoController extends Controller
         ]);
 
         // Evitar duplicar solicitud activa para el mismo pedido
-        $existente = Despacho::where('restaurant_id', $restaurant->id)
+        $existente = Despacho::where('negocio_id', $negocio->id)
             ->where('external_order_id', $data['order_id'])
             ->whereNotIn('estado', ['entregado', 'cancelado'])
             ->first();
@@ -64,7 +64,7 @@ class DespachoController extends Controller
         $comisionDefault = (float) ConfiguracionCentral::get('comision_por_entrega', 0.50);
 
         $despacho = Despacho::create([
-            'restaurant_id'        => $restaurant->id,
+            'negocio_id'        => $negocio->id,
             'external_order_id'    => $data['order_id'],
             'estado'               => 'solicitado',
             'order_data'           => $data['order_data'],
@@ -77,19 +77,19 @@ class DespachoController extends Controller
         NotificacionAdmin::crear(
             'nuevo_despacho',
             'Nuevo pedido solicitado',
-            "{$restaurant->name} solicitó un despacho para el pedido #{$data['order_id']}",
-            ['despacho_id' => $despacho->id, 'restaurant_id' => $restaurant->id],
+            "{$negocio->name} solicitó un despacho para el pedido #{$data['order_id']}",
+            ['despacho_id' => $despacho->id, 'negocio_id' => $negocio->id],
         );
 
         return $this->created($this->formatDespacho($despacho), 'Despacho solicitado');
     }
 
-    // GET /v1/despachos/{order_id}/estado  (auth: restaurant.auth)
+    // GET /v1/despachos/{order_id}/estado  (auth: negocio.auth)
     public function estadoPorOrderId(Request $request, int $orderId): JsonResponse
     {
-        $restaurant = $request->attributes->get('restaurant');
+        $negocio = $request->attributes->get('negocio');
 
-        $despacho = Despacho::where('restaurant_id', $restaurant->id)
+        $despacho = Despacho::where('negocio_id', $negocio->id)
             ->where('external_order_id', $orderId)
             ->latest()
             ->first();
@@ -99,12 +99,12 @@ class DespachoController extends Controller
         return $this->success($this->formatDespacho($despacho));
     }
 
-    // POST /v1/despachos/{order_id}/cancelar  (auth: restaurant.auth)
-    public function cancelarPorRestaurante(Request $request, int $orderId): JsonResponse
+    // POST /v1/despachos/{order_id}/cancelar  (auth: negocio.auth)
+    public function cancelarPorNegocio(Request $request, int $orderId): JsonResponse
     {
-        $restaurant = $request->attributes->get('restaurant');
+        $negocio = $request->attributes->get('negocio');
 
-        $despacho = Despacho::where('restaurant_id', $restaurant->id)
+        $despacho = Despacho::where('negocio_id', $negocio->id)
             ->where('external_order_id', $orderId)
             ->whereNotIn('estado', ['entregado', 'cancelado'])
             ->first();
@@ -122,8 +122,8 @@ class DespachoController extends Controller
 
         NotificacionAdmin::crear(
             'despacho_cancelado',
-            'Restaurante canceló un pedido',
-            "{$restaurant->name} canceló el pedido #{$orderId}",
+            'El negocio canceló un pedido',
+            "{$negocio->name} canceló el pedido #{$orderId}",
             ['despacho_id' => $despacho->id],
         );
 
@@ -401,7 +401,7 @@ class DespachoController extends Controller
     // GET /v1/motorizado/pedidos
     public function pedidosDisponibles(Request $request): JsonResponse
     {
-        $despachos = Despacho::with('restaurant')
+        $despachos = Despacho::with('negocio')
             ->where('estado', 'solicitado')
             ->orderBy('solicitado_at')
             ->get()
@@ -413,7 +413,7 @@ class DespachoController extends Controller
     // GET /v1/motorizado/despachos/activo
     public function despachoActivo(Request $request): JsonResponse
     {
-        $despacho = Despacho::with(['restaurant', 'motorizado'])
+        $despacho = Despacho::with(['negocio', 'motorizado'])
             ->where('motorizado_id', $request->user()->id)
             ->whereNotIn('estado', ['entregado', 'cancelado'])
             ->latest()
@@ -436,7 +436,7 @@ class DespachoController extends Controller
         }
 
         return DB::transaction(function () use ($id, $motorizado) {
-            $despacho = Despacho::with('restaurant')
+            $despacho = Despacho::with('negocio')
                 ->where('id', $id)
                 ->lockForUpdate()
                 ->first();
@@ -463,9 +463,9 @@ class DespachoController extends Controller
 
             $motorizado->update(['estado' => 'ocupado']);
 
-            $despacho->load('motorizado', 'restaurant');
+            $despacho->load('motorizado', 'negocio');
             broadcast(new DespachoActualizado($despacho));
-            NotifyRestaurantWebhook::dispatch($despacho);
+            NotifyNegocioWebhook::dispatch($despacho);
 
             return $this->success($this->formatDespacho($despacho), 'Despacho aceptado');
         });
@@ -482,7 +482,7 @@ class DespachoController extends Controller
 
         $motorizado = $request->user();
 
-        $despacho = Despacho::with('restaurant')
+        $despacho = Despacho::with('negocio')
             ->where('id', $id)
             ->where('motorizado_id', $motorizado->id)
             ->first();
@@ -528,9 +528,9 @@ class DespachoController extends Controller
             ]);
         }
 
-        $despacho->load('motorizado', 'restaurant');
+        $despacho->load('motorizado', 'negocio');
         broadcast(new DespachoActualizado($despacho));
-        NotifyRestaurantWebhook::dispatch($despacho);
+        NotifyNegocioWebhook::dispatch($despacho);
 
         return $this->success($this->formatDespacho($despacho), 'Estado actualizado');
     }
@@ -538,7 +538,7 @@ class DespachoController extends Controller
     // GET /v1/motorizado/historial
     public function historial(Request $request): JsonResponse
     {
-        $despachos = Despacho::with('restaurant')
+        $despachos = Despacho::with('negocio')
             ->where('motorizado_id', $request->user()->id)
             ->where('estado', 'entregado')
             ->orderByDesc('entregado_at')
@@ -556,10 +556,10 @@ class DespachoController extends Controller
     // GET /admin/despachos
     public function index(Request $request): JsonResponse
     {
-        $query = Despacho::with(['restaurant', 'motorizado']);
+        $query = Despacho::with(['negocio', 'motorizado']);
 
-        if ($request->filled('restaurant_id')) {
-            $query->where('restaurant_id', $request->restaurant_id);
+        if ($request->filled('negocio_id')) {
+            $query->where('negocio_id', $request->negocio_id);
         }
 
         $activos = (clone $query)
@@ -674,7 +674,7 @@ class DespachoController extends Controller
             'motivo' => 'required|string|max:255',
         ]);
 
-        $despacho = Despacho::with('restaurant')->findOrFail($id);
+        $despacho = Despacho::with('negocio')->findOrFail($id);
         $despacho->update([
             'estado'             => 'cancelado',
             'motivo_cancelacion' => $data['motivo'],
@@ -694,7 +694,7 @@ class DespachoController extends Controller
             ['despacho_id' => $despacho->id],
         );
 
-        NotifyRestaurantWebhook::dispatch($despacho);
+        NotifyNegocioWebhook::dispatch($despacho);
 
         return $this->success($this->formatDespacho($despacho), 'Despacho cancelado');
     }
@@ -709,8 +709,8 @@ class DespachoController extends Controller
 
         return [
             'id'                  => $d->id,
-            'restaurant_id'       => $d->restaurant_id,
-            'restaurant'          => $d->restaurant?->name,
+            'negocio_id'       => $d->negocio_id,
+            'negocio'          => $d->negocio?->name,
             'order_id'            => $d->external_order_id,
             'estado'              => $d->estado,
             'motivo_cancelacion'  => $d->motivo_cancelacion,
@@ -746,7 +746,7 @@ class DespachoController extends Controller
     // GET /admin/despachos/historial — historial completo, paginado y filtrable
     public function historialCentral(Request $request): JsonResponse
     {
-        $query = Despacho::with(['restaurant', 'motorizado']);
+        $query = Despacho::with(['negocio', 'motorizado']);
 
         if ($request->filled('desde') && $request->filled('hasta')) {
             $desde = Carbon::parse($request->query('desde'))->startOfDay();
@@ -758,8 +758,8 @@ class DespachoController extends Controller
             $query->where('estado', $request->query('estado'));
         }
 
-        if ($request->filled('restaurant_id')) {
-            $query->where('restaurant_id', $request->query('restaurant_id'));
+        if ($request->filled('negocio_id')) {
+            $query->where('negocio_id', $request->query('negocio_id'));
         }
 
         if ($request->filled('motorizado_id')) {

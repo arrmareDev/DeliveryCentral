@@ -78,16 +78,16 @@
                         disponibles</p>
                     <p class="font-black text-[24px] text-blue-600 dark:text-blue-400 leading-none m-0">{{
                         store.stats.motorizados_disponibles
-                        }}</p>
+                    }}</p>
                 </div>
             </div>
 
-            <!-- Filtro por restaurante -->
-            <select v-model="restaurantFilter" @change="store.fetchAll(restaurantFilter || undefined)" class="self-start px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
+            <!-- Filtro por negocio -->
+            <select v-model="negocioFilter" @change="store.fetchAll(negocioFilter || undefined)" class="self-start px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
              bg-white dark:bg-gray-900 text-[13px] text-gray-700 dark:text-gray-300 outline-none cursor-pointer
              focus:border-brand-primary transition-all duration-200 font-semibold">
-                <option :value="undefined">Todos los restaurantes</option>
-                <option v-for="r in restaurants.restaurants" :key="r.id" :value="r.id">{{ r.name }}</option>
+                <option :value="undefined">Todos los negocios</option>
+                <option v-for="r in negocios.negocios" :key="r.id" :value="r.id">{{ r.name }}</option>
             </select>
 
             <!-- Activos -->
@@ -127,7 +127,7 @@
                                         <span class="text-[11px] font-bold px-2 py-0.5 rounded-full
                                bg-purple-50 text-purple-700 border border-purple-200
                                dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20">
-                                            {{ d.restaurant }}
+                                            {{ d.negocio }}
                                         </span>
                                         <span :class="despachoCls(d.estado)"
                                             class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border">
@@ -233,7 +233,7 @@
                                     d.order?.client_name }}</span>
                             </div>
                             <p class="text-[12px] text-gray-400 dark:text-gray-500 m-0 mt-0.5">
-                                {{ d.restaurant }} · {{ d.motorizado?.nombre ?? '—' }}
+                                {{ d.negocio }} · {{ d.motorizado?.nombre ?? '—' }}
                             </p>
                         </div>
                         <div class="flex items-baseline gap-0.5 shrink-0">
@@ -275,11 +275,11 @@
                         <option value="cancelado">Cancelado</option>
                     </select>
 
-                    <select v-model="filtros.restaurant_id" class="px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
+                    <select v-model="filtros.negocio_id" class="px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
                        bg-white dark:bg-gray-800 text-[13px] text-gray-700 dark:text-gray-300 outline-none cursor-pointer
                        focus:border-brand-primary transition-all duration-200 font-semibold">
-                        <option :value="undefined">Todos los restaurantes</option>
-                        <option v-for="r in restaurants.restaurants" :key="r.id" :value="r.id">{{ r.name }}</option>
+                        <option :value="undefined">Todos los negocios</option>
+                        <option v-for="r in negocios.negocios" :key="r.id" :value="r.id">{{ r.name }}</option>
                     </select>
 
                     <select v-model="filtros.motorizado_id" class="px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
@@ -309,7 +309,7 @@
                     <ExportButtons endpoint="/admin/reportes/despachos" :params="{
                         buscar: filtros.buscar || undefined,
                         estado: filtros.estado || undefined,
-                        restaurant_id: filtros.restaurant_id,
+                        negocio_id: filtros.negocio_id,
                         motorizado_id: filtros.motorizado_id,
                         desde: filtros.desde || undefined,
                         hasta: filtros.hasta || undefined,
@@ -342,7 +342,7 @@
                                     Pedido</th>
                                 <th
                                     class="px-4 py-3 text-[10.5px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                                    Restaurante</th>
+                                    Negocio</th>
                                 <th
                                     class="px-4 py-3 text-[10.5px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
                                     Cliente</th>
@@ -370,7 +370,7 @@
                                 <td
                                     class="px-4 py-3 text-[12.5px] font-mono font-bold text-gray-700 dark:text-gray-300">
                                     #{{ d.order_id }}</td>
-                                <td class="px-4 py-3 text-[12.5px] text-gray-600 dark:text-gray-400">{{ d.restaurant ??
+                                <td class="px-4 py-3 text-[12.5px] text-gray-600 dark:text-gray-400">{{ d.negocio ??
                                     '—' }}</td>
                                 <td class="px-4 py-3 text-[12.5px] text-gray-900 dark:text-gray-100 font-medium">{{
                                     d.order?.client_name ?? '—' }}</td>
@@ -405,7 +405,7 @@
         </template>
 
         <CancelarDespachoModal v-model="confirmCancel.show"
-            :message="`El despacho del pedido #${confirmCancel.target?.order_id} de ${confirmCancel.target?.restaurant} será cancelado y el motorizado quedará disponible nuevamente.`"
+            :message="`El despacho del pedido #${confirmCancel.target?.order_id} de ${confirmCancel.target?.negocio} será cancelado y el motorizado quedará disponible nuevamente.`"
             :loading="confirmCancel.loading" @confirm="executeCancel" />
     </div>
 </template>
@@ -417,7 +417,7 @@ import {
     MagnifyingGlassIcon, ClipboardDocumentListIcon, ChevronUpIcon, ChevronDownIcon,
 } from '@heroicons/vue/24/outline'
 import { useDespachosStore, type DespachoItem } from '../stores/despachos'
-import { useRestaurantsStore } from '../stores/restaurants'
+import { useNegociosStore } from '../stores/negocios'
 import { useMotorizadosStore } from '../stores/motorizados'
 import { useEcho } from '../composables/useHecho.ts'
 import { useToastStore } from '../stores/toast'
@@ -426,10 +426,10 @@ import Pagination from '../components/Pagination.vue'
 import ExportButtons from '../components/ExportButtons.vue'
 
 const store = useDespachosStore()
-const restaurants = useRestaurantsStore()
+const negocios = useNegociosStore()
 const motorizados = useMotorizadosStore()
 const toast = useToastStore()
-const restaurantFilter = ref<number | undefined>(undefined)
+const negocioFilter = ref<number | undefined>(undefined)
 
 // ── Tabs ───────────────────────────────────────────────────
 const tab = ref<'vivo' | 'historial'>('vivo')
@@ -438,7 +438,7 @@ const tab = ref<'vivo' | 'historial'>('vivo')
 const filtros = reactive({
     buscar: '',
     estado: '',
-    restaurant_id: undefined as number | undefined,
+    negocio_id: undefined as number | undefined,
     motorizado_id: undefined as number | undefined,
     desde: '',
     hasta: '',
@@ -451,7 +451,7 @@ function cargarHistorial() {
     store.fetchHistorial({
         buscar: filtros.buscar || undefined,
         estado: filtros.estado || undefined,
-        restaurant_id: filtros.restaurant_id,
+        negocio_id: filtros.negocio_id,
         motorizado_id: filtros.motorizado_id,
         desde: filtros.desde || undefined,
         hasta: filtros.hasta || undefined,
@@ -473,7 +473,7 @@ function toggleSort() {
 
 function limpiarFiltros() {
     Object.assign(filtros, {
-        buscar: '', estado: '', restaurant_id: undefined, motorizado_id: undefined,
+        buscar: '', estado: '', negocio_id: undefined, motorizado_id: undefined,
         desde: '', hasta: '', sort_dir: 'desc', page: 1,
     })
     cargarHistorial()
@@ -485,7 +485,7 @@ watch(() => filtros.buscar, () => {
     debounceTimer = setTimeout(cargarHistorial, 350)
 })
 
-watch(() => [filtros.estado, filtros.restaurant_id, filtros.motorizado_id, filtros.desde, filtros.hasta], () => {
+watch(() => [filtros.estado, filtros.negocio_id, filtros.motorizado_id, filtros.desde, filtros.hasta], () => {
     filtros.page = 1
     cargarHistorial()
 })
@@ -499,7 +499,7 @@ watch(tab, (t) => {
 let echo: any = null
 
 onMounted(async () => {
-    await Promise.all([store.fetchAll(), restaurants.fetchAll()])
+    await Promise.all([store.fetchAll(), negocios.fetchAll()])
     echo = useEcho()
     echo.channel('admin.despachos')
         .listen('.despacho.actualizado', (data: any) => store.handleRealtimeUpdate(data))

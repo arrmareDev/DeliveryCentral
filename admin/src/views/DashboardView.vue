@@ -21,9 +21,9 @@
                 </div>
                 <p class="font-black text-[24px] sm:text-[28px] text-gray-900 dark:text-gray-100 leading-none m-0"
                     style="font-family:'Plus Jakarta Sans',sans-serif;">
-                    {{ restaurantsActivos }}
+                    {{ negociosActivos }}
                 </p>
-                <p class="text-[12px] text-gray-400 dark:text-gray-500 mt-1 m-0">Restaurantes activos</p>
+                <p class="text-[12px] text-gray-400 dark:text-gray-500 mt-1 m-0">Negocios activos</p>
             </div>
 
             <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800
@@ -191,14 +191,14 @@
                         <div class="w-9 h-9 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700
                         flex items-center justify-center shrink-0">
                             <span class="text-[11px] font-black text-gray-500 dark:text-gray-400">#{{ d.order_id
-                                }}</span>
+                            }}</span>
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="font-semibold text-[12.5px] text-gray-900 dark:text-gray-100 m-0 truncate">
                                 {{ d.order?.client_name ?? 'Cliente' }}
                             </p>
                             <p class="text-[11px] text-gray-400 dark:text-gray-500 m-0 truncate">
-                                {{ d.restaurant }}
+                                {{ d.negocio }}
                             </p>
                         </div>
                         <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0"
@@ -266,20 +266,20 @@ import {
 } from '@heroicons/vue/24/outline'
 import { useDespachosStore } from '../stores/despachos'
 import { useComisionesStore } from '../stores/comisiones'
-import { useRestaurantsStore } from '../stores/restaurants'
+import { useNegociosStore } from '../stores/negocios'
 import { useMotorizadosStore } from '../stores/motorizados'
 import { useAnalyticsStore } from '../stores/analytics'
 import { useThemeStore } from '../stores/theme'
 
 const despachosStore = useDespachosStore()
 const comisiones = useComisionesStore()
-const restaurants = useRestaurantsStore()
+const negocios = useNegociosStore()
 const motorizados = useMotorizadosStore()
 const analytics = useAnalyticsStore()
 const theme = useThemeStore()
 
-const restaurantsActivos = computed(() =>
-    restaurants.restaurants.filter(r => r.activo).length
+const negociosActivos = computed(() =>
+    negocios.negocios.filter(r => r.activo).length
 )
 
 const motorizadosDisponibles = computed(() =>
@@ -298,7 +298,7 @@ const topDeudores = computed(() =>
 )
 
 onMounted(() => {
-    restaurants.fetchAll()
+    negocios.fetchAll()
     motorizados.fetchAll()
     comisiones.fetchResumen()
     analytics.fetchDashboard()

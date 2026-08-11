@@ -158,7 +158,7 @@ const loggingOut = ref(false)
 
 const NAV_ITEMS = [
     { to: '/', label: 'Dashboard', icon: HomeIcon },
-    { to: '/restaurantes', label: 'Empresas', icon: BuildingStorefrontIcon },
+    { to: '/negocios', label: 'Negocios', icon: BuildingStorefrontIcon },
     { to: '/motorizados', label: 'Motorizados', icon: UserGroupIcon },
     { to: '/despachos', label: 'Despachos', icon: ClipboardDocumentListIcon, badge: () => despachos.stats.total_activos },
     { to: '/comisiones', label: 'Comisiones', icon: BanknotesIcon },
@@ -167,7 +167,7 @@ const NAV_ITEMS = [
 
 const TITLES: Record<string, string> = {
     dashboard: 'Dashboard',
-    restaurantes: 'Restaurantes',
+    negocios: 'Negocios',
     motorizados: 'Motorizados',
     despachos: 'Despachos',
     comisiones: 'Comisiones',

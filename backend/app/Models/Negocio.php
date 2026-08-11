@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-class Restaurant extends Model
+class Negocio extends Model
 {
     use HasFactory;
+
+    protected $table = 'negocios';
 
     protected $fillable = [
         'name',
@@ -25,7 +27,7 @@ class Restaurant extends Model
 
     public static function generateApiKey(): string
     {
-        return 'rst_live_' . Str::random(48);
+        return 'ngc_live_' . Str::random(48);
     }
 
     public function despachos()

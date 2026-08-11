@@ -85,7 +85,7 @@ const emit = defineEmits<{
 
 const MOTIVOS = [
     'Cliente canceló',
-    'Restaurante sin stock',
+    'Negocio sin stock',
     'Motorizado no disponible',
     'Dirección incorrecta',
     'Pedido duplicado',

@@ -6,7 +6,7 @@
             <div>
                 <h1 class="font-black text-[22px] sm:text-[24px] text-gray-900 dark:text-gray-100 m-0 leading-none"
                     style="font-family:'Plus Jakarta Sans',sans-serif;">
-                    Restaurantes
+                    Negocios
                 </h1>
                 <p class="text-[13px] text-gray-400 dark:text-gray-500 mt-1 m-0">
                     {{ store.meta.total }} cliente{{ store.meta.total !== 1 ? 's' : '' }} registrado{{
@@ -17,7 +17,7 @@
                text-white font-bold text-[13px] border-none cursor-pointer
                shadow-sm hover:bg-brand-primary-dark transition-all duration-150">
                 <PlusIcon class="w-4 h-4" />
-                Nuevo restaurante
+                Nuevo negocio
             </button>
         </div>
 
@@ -44,26 +44,26 @@
         </div>
 
         <!-- Empty -->
-        <div v-else-if="store.restaurants.length === 0"
+        <div v-else-if="store.negocios.length === 0"
             class="flex flex-col items-center py-20 text-gray-400 dark:text-gray-600 gap-4">
             <div class="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                 <BuildingStorefrontIcon class="w-10 h-10 text-gray-300 dark:text-gray-700" />
             </div>
             <div class="text-center">
-                <p class="font-bold text-gray-600 dark:text-gray-400 text-[15px] m-0">Sin restaurantes</p>
+                <p class="font-bold text-gray-600 dark:text-gray-400 text-[15px] m-0">Sin negocios</p>
                 <p class="text-[13px] m-0 mt-1">Conecta tu primer cliente al sistema</p>
             </div>
             <button @click="openCreateModal" class="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-brand-primary
                text-white font-bold text-[13px] border-none cursor-pointer
                shadow-sm hover:bg-brand-primary-dark transition-all duration-150">
                 <PlusIcon class="w-4 h-4" />
-                Registrar restaurante
+                Registrar negocio
             </button>
         </div>
 
         <!-- Grid -->
         <div v-else class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <div v-for="r in store.restaurants" :key="r.id" class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800
+            <div v-for="r in store.negocios" :key="r.id" class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800
                shadow-sm dark:shadow-none p-5 flex flex-col gap-3 transition-colors duration-200">
 
                 <div class="flex items-start justify-between gap-2">
@@ -118,7 +118,7 @@
                 </div>
             </div>
         </div>
-        <Pagination v-if="!store.loading && store.restaurants.length > 0" :meta="store.meta" @change="cambiarPagina" />
+        <Pagination v-if="!store.loading && store.negocios.length > 0" :meta="store.meta" @change="cambiarPagina" />
 
         <!-- ══ MODAL CREAR/EDITAR ══ -->
         <Teleport to="body">
@@ -134,16 +134,16 @@
 
                             <h3 class="font-black text-[18px] text-gray-900 dark:text-gray-100 m-0 mb-5"
                                 style="font-family:'Plus Jakarta Sans',sans-serif;">
-                                {{ formModal.editing ? 'Editar restaurante' : 'Nuevo restaurante' }}
+                                {{ formModal.editing ? 'Editar negocio' : 'Nuevo negocio' }}
                             </h3>
 
                             <div class="flex flex-col gap-3.5">
                                 <div>
                                     <label class="block text-[10.5px] font-black uppercase
                                 tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
-                                        Nombre del restaurante *
+                                        Nombre del negocio *
                                     </label>
-                                    <input v-model="form.name" placeholder="Ej: Mahoma Chicken" class="modal-input" />
+                                    <input v-model="form.name" placeholder="Ej: Mi Negocio SAC" class="modal-input" />
                                 </div>
 
                                 <div v-if="!formModal.editing">
@@ -151,8 +151,7 @@
                                 tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
                                         Slug (identificador único) *
                                     </label>
-                                    <input v-model="form.slug" placeholder="mahoma-chicken"
-                                        class="modal-input font-mono" />
+                                    <input v-model="form.slug" placeholder="mi-negocio" class="modal-input font-mono" />
                                     <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                                         Solo letras minúsculas, números y guiones
                                     </p>
@@ -164,7 +163,7 @@
                                         Webhook URL
                                     </label>
                                     <input v-model="form.webhook_url"
-                                        placeholder="https://mahoma.com/api/v1/webhooks/despacho"
+                                        placeholder="https://minegocio.com/api/v1/webhooks/despacho"
                                         class="modal-input font-mono text-[12.5px]" />
                                     <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                                         URL donde se notificarán los cambios de estado de despachos
@@ -199,7 +198,7 @@
                            rounded-full animate-spin" />
                                     {{ formModal.loading
                                         ? 'Guardando...'
-                                        : (formModal.editing ? 'Guardar cambios' : 'Crear restaurante') }}
+                                        : (formModal.editing ? 'Guardar cambios' : 'Crear negocio') }}
                                 </button>
                             </div>
                         </div>
@@ -230,7 +229,7 @@
                                         Credenciales API
                                     </h3>
                                     <p class="text-[12px] text-gray-400 dark:text-gray-500 m-0">
-                                        {{ keyModal.restaurant?.name }}
+                                        {{ keyModal.negocio?.name }}
                                     </p>
                                 </div>
                             </div>
@@ -242,9 +241,9 @@
                                         API Key
                                     </label>
                                     <div class="flex gap-2">
-                                        <input :value="keyModal.restaurant?.api_key" readonly
+                                        <input :value="keyModal.negocio?.api_key" readonly
                                             class="modal-input font-mono text-[11.5px] flex-1" />
-                                        <button @click="copyToClipboard(keyModal.restaurant?.api_key, 'API Key')" class="w-11 shrink-0 rounded-2xl border-2 border-gray-100 dark:border-gray-700
+                                        <button @click="copyToClipboard(keyModal.negocio?.api_key, 'API Key')" class="w-11 shrink-0 rounded-2xl border-2 border-gray-100 dark:border-gray-700
                              bg-gray-50 dark:bg-gray-800 flex items-center justify-center
                              text-gray-500 dark:text-gray-400 hover:text-brand-primary hover:border-brand-primary
                              cursor-pointer transition-all duration-150">
@@ -259,10 +258,10 @@
                                         Webhook Secret
                                     </label>
                                     <div class="flex gap-2">
-                                        <input :value="keyModal.restaurant?.webhook_secret" readonly
+                                        <input :value="keyModal.negocio?.webhook_secret" readonly
                                             class="modal-input font-mono text-[11.5px] flex-1" />
                                         <button
-                                            @click="copyToClipboard(keyModal.restaurant?.webhook_secret, 'Webhook Secret')"
+                                            @click="copyToClipboard(keyModal.negocio?.webhook_secret, 'Webhook Secret')"
                                             class="w-11 shrink-0 rounded-2xl border-2 border-gray-100 dark:border-gray-700
                              bg-gray-50 dark:bg-gray-800 flex items-center justify-center
                              text-gray-500 dark:text-gray-400 hover:text-brand-primary hover:border-brand-primary
@@ -280,7 +279,7 @@
                                     class="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
                                 <p class="text-[11.5px] text-amber-700 dark:text-amber-400 m-0 leading-relaxed">
                                     Guarda estas credenciales en el <code class="font-mono">.env</code> del backend del
-                                    restaurante.
+                                    negocio.
                                     Si las regeneras, las anteriores dejan de funcionar inmediatamente.
                                 </p>
                             </div>
@@ -308,7 +307,7 @@
 
         <!-- Modales de confirmación -->
         <ConfirmModal v-model="confirmToggle.show"
-            :title="confirmToggle.target?.activo ? '¿Desactivar restaurante?' : '¿Activar restaurante?'" :message="confirmToggle.target?.activo
+            :title="confirmToggle.target?.activo ? '¿Desactivar negocio?' : '¿Activar negocio?'" :message="confirmToggle.target?.activo
                 ? `${confirmToggle.target?.name} dejará de poder solicitar despachos hasta que lo reactives.`
                 : `${confirmToggle.target?.name} podrá volver a solicitar despachos normalmente.`"
             :variant="confirmToggle.target?.activo ? 'warning' : 'success'"
@@ -316,7 +315,7 @@
             :loading="confirmToggle.loading" @confirm="executeToggleActivo" />
 
         <ConfirmModal v-model="confirmRegen.show" title="¿Regenerar API Key?"
-            message="La API key y webhook secret actuales dejarán de funcionar de inmediato. El restaurante deberá actualizar sus credenciales."
+            message="La API key y webhook secret actuales dejarán de funcionar de inmediato. El negocio deberá actualizar sus credenciales."
             variant="danger" confirm-label="Sí, regenerar" :loading="confirmRegen.loading"
             @confirm="executeRegenerateKey" />
     </div>
@@ -330,12 +329,12 @@ import {
     ExclamationCircleIcon, ExclamationTriangleIcon, ClipboardIcon, ArrowPathIcon,
     MagnifyingGlassIcon,
 } from '@heroicons/vue/24/outline'
-import { useRestaurantsStore, type Restaurant } from '../stores/restaurants'
+import { useNegociosStore, type Negocio } from '../stores/negocios'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import Pagination from '../components/Pagination.vue'
 import { useToastStore } from '../stores/toast'
 
-const store = useRestaurantsStore()
+const store = useNegociosStore()
 const toast = useToastStore()
 
 // ── Búsqueda + orden + paginación ─────────────────────────
@@ -376,7 +375,7 @@ onMounted(cargar)
 const form = reactive({ name: '', slug: '', webhook_url: '' })
 
 const formModal = reactive({
-    show: false, editing: null as Restaurant | null, loading: false, error: '',
+    show: false, editing: null as Negocio | null, loading: false, error: '',
 })
 
 const canSubmit = computed(() => {
@@ -391,7 +390,7 @@ function openCreateModal() {
     formModal.show = true
 }
 
-function openEditModal(r: Restaurant) {
+function openEditModal(r: Negocio) {
     Object.assign(form, { name: r.name, slug: r.slug, webhook_url: r.webhook_url ?? '' })
     formModal.editing = r
     formModal.error = ''
@@ -411,10 +410,10 @@ async function submitForm() {
         formModal.loading = false
         if (ok) {
             formModal.show = false
-            toast.success('Restaurante actualizado')
+            toast.success('Negocio actualizado')
             cargar()
         } else {
-            formModal.error = 'Error al actualizar el restaurante'
+            formModal.error = 'Error al actualizar el negocio'
         }
     } else {
         const result = await store.create({
@@ -425,21 +424,21 @@ async function submitForm() {
         formModal.loading = false
         if (result.ok) {
             formModal.show = false
-            toast.success('Restaurante creado correctamente')
+            toast.success('Negocio creado correctamente')
             cargar()
             if (result.data) openKeyModal(result.data)
         } else {
-            formModal.error = result.message ?? 'Error al crear el restaurante'
+            formModal.error = result.message ?? 'Error al crear el negocio'
         }
     }
 }
 
 // ── Modal API Key ──────────────────────────────────────────
-const keyModal = reactive({ show: false, restaurant: null as Restaurant | null })
+const keyModal = reactive({ show: false, negocio: null as Negocio | null })
 
-async function openKeyModal(r: Restaurant) {
+async function openKeyModal(r: Negocio) {
     const full = await store.getOne(r.id)
-    keyModal.restaurant = full ?? r
+    keyModal.negocio = full ?? r
     keyModal.show = true
 }
 
@@ -457,13 +456,13 @@ function askRegenerateKey() {
 }
 
 async function executeRegenerateKey() {
-    if (!keyModal.restaurant) return
+    if (!keyModal.negocio) return
     confirmRegen.loading = true
-    const updated = await store.regenerateKey(keyModal.restaurant.id)
+    const updated = await store.regenerateKey(keyModal.negocio.id)
     confirmRegen.loading = false
     confirmRegen.show = false
     if (updated) {
-        keyModal.restaurant = updated
+        keyModal.negocio = updated
         toast.success('Credenciales regeneradas')
     } else {
         toast.error('Error al regenerar las credenciales')
@@ -472,10 +471,10 @@ async function executeRegenerateKey() {
 
 // ── Confirmar activar/desactivar ──────────────────────────
 const confirmToggle = reactive({
-    show: false, loading: false, target: null as Restaurant | null,
+    show: false, loading: false, target: null as Negocio | null,
 })
 
-function askToggleActivo(r: Restaurant) {
+function askToggleActivo(r: Negocio) {
     confirmToggle.target = r
     confirmToggle.show = true
 }
@@ -487,7 +486,7 @@ async function executeToggleActivo() {
     confirmToggle.loading = false
     confirmToggle.show = false
     if (ok) {
-        toast.success(confirmToggle.target.activo ? 'Restaurante desactivado' : 'Restaurante activado')
+        toast.success(confirmToggle.target.activo ? 'Negocio desactivado' : 'Negocio activado')
     } else {
         toast.error('Error al actualizar el estado')
     }

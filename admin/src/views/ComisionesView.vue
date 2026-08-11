@@ -214,12 +214,12 @@
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <p class="font-semibold text-[12.5px] text-gray-900 dark:text-gray-100 m-0">
-                                                #{{ c.order_id }} · {{ c.restaurant }}
+                                                #{{ c.order_id }} · {{ c.negocio }}
                                             </p>
                                             <p class="text-[11px] text-gray-400 dark:text-gray-500 m-0">
                                                 {{ formatFecha(c.created_at) }}
                                                 <span v-if="c.cobrado_at"> · Cobrado {{ formatFecha(c.cobrado_at)
-                                                    }}</span>
+                                                }}</span>
                                             </p>
                                         </div>
                                         <div class="flex items-baseline gap-0.5 shrink-0">

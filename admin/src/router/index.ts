@@ -20,10 +20,10 @@ const routes = [
         meta: { breadcrumb: "Dashboard" },
       },
       {
-        path: "restaurantes",
-        name: "restaurantes",
-        component: () => import("../views/RestaurantesView.vue"),
-        meta: { breadcrumb: "Restaurantes" },
+        path: "negocios",
+        name: "negocios",
+        component: () => import("../views/NegociosView.vue"),
+        meta: { breadcrumb: "Negocios" },
       },
       {
         path: "motorizados",

@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'restaurant.auth' => \App\Http\Middleware\AuthenticateRestaurant::class,
+            'negocio.auth' => \App\Http\Middleware\AuthenticateNegocio::class,
         ]);
     })
 

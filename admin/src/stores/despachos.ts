@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "../utils/api";
-import type { PaginationMeta } from "./restaurants";
+import type { PaginationMeta } from "./negocios";
 
 export interface DespachoOrder {
   client_name: string | null;
@@ -19,8 +19,8 @@ export interface DespachoOrder {
 
 export interface DespachoItem {
   id: number;
-  restaurant_id: number;
-  restaurant: string | null;
+  negocio_id: number;
+  negocio: string | null;
   order_id: number;
   estado: string;
   motivo_cancelacion?: string | null;
@@ -51,7 +51,7 @@ export interface HistorialParams {
   desde?: string;
   hasta?: string;
   estado?: string;
-  restaurant_id?: number;
+  negocio_id?: number;
   motorizado_id?: number;
   buscar?: string;
   sort_dir?: "asc" | "desc";
@@ -79,11 +79,11 @@ export const useDespachosStore = defineStore("despachos", () => {
   });
   const historialLoading = ref(false);
 
-  async function fetchAll(restaurantId?: number) {
+  async function fetchAll(negocioId?: number) {
     loading.value = true;
     try {
       const { data } = await api.get("/admin/despachos", {
-        params: restaurantId ? { restaurant_id: restaurantId } : {},
+        params: negocioId ? { negocio_id: negocioId } : {},
       });
       activos.value = data.data.activos;
       entregadosHoy.value = data.data.entregados_hoy;

@@ -10,7 +10,7 @@ class Despacho extends Model
     use HasFactory;
 
     protected $fillable = [
-        'restaurant_id',
+        'negocio_id',
         'external_order_id',
         'motorizado_id',
         'estado',
@@ -35,9 +35,9 @@ class Despacho extends Model
         'entregado_at'         => 'datetime',
     ];
 
-    public function restaurant()
+    public function negocio()
     {
-        return $this->belongsTo(Restaurant::class);
+        return $this->belongsTo(Negocio::class);
     }
 
     public function motorizado()

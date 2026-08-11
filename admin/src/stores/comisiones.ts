@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "../utils/api";
-import type { PaginationMeta } from "./restaurants";
+import type { PaginationMeta } from "./negocios";
 
 export interface ComisionResumen {
   id: number;
@@ -16,7 +16,7 @@ export interface ComisionDetalleItem {
   id: number;
   despacho_id: number;
   order_id: number;
-  restaurant: string | null;
+  negocio: string | null;
   monto: number;
   estado: "pendiente" | "cobrado";
   cobrado_at: string | null;

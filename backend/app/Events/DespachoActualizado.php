@@ -19,11 +19,15 @@ class DespachoActualizado implements ShouldBroadcast
     {
         $channels = [
             new Channel('admin.despachos'),
-            new Channel("restaurant.{$this->despacho->restaurant_id}"),
+            new Channel("negocio.{$this->despacho->negocio_id}"),
         ];
 
         if ($this->despacho->motorizado_id) {
             $channels[] = new Channel("motorizado.{$this->despacho->motorizado_id}");
+        }
+
+        if ($this->despacho->estado !== 'solicitado') {
+            $channels[] = new Channel('motorizados');
         }
 
         return $channels;

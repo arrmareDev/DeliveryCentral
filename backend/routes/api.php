@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Api\ComisionController;
 use App\Http\Controllers\Api\DespachoController;
-use App\Http\Controllers\Api\RestaurantController;
+use App\Http\Controllers\Api\NegocioController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ReportesController;
@@ -10,15 +10,15 @@ use App\Http\Controllers\Api\NotificacionController;
 use App\Http\Controllers\Api\BusquedaController;
 
 // ══════════════════════════════════════════════════════════
-// ── RESTAURANTES — autenticados con API key ─────────────────
+// ── NEGOCIOS CLIENTES — autenticados con API key ─────────────
 // ══════════════════════════════════════════════════════════
 Route::prefix('v1')
-    ->middleware(['restaurant.auth', 'throttle:120,1'])
+    ->middleware(['negocio.auth', 'throttle:120,1'])
     ->group(function () {
         Route::post('despachos/solicitar', [DespachoController::class, 'solicitar']);
         Route::get('despachos/{order_id}/estado', [DespachoController::class, 'estadoPorOrderId'])
             ->where('order_id', '[0-9]+');
-        Route::post('despachos/{order_id}/cancelar', [DespachoController::class, 'cancelarPorRestaurante'])
+        Route::post('despachos/{order_id}/cancelar', [DespachoController::class, 'cancelarPorNegocio'])
             ->where('order_id', '[0-9]+');
     });
 
@@ -77,22 +77,22 @@ Route::prefix('v1/admin')
     ->middleware(['auth:sanctum', 'throttle:120,1'])
     ->group(function () {
 
-        // Restaurantes (tus clientes)
-        Route::get('restaurants', [RestaurantController::class, 'index']);
-        Route::post('restaurants', [RestaurantController::class, 'store']);
-        Route::get('restaurants/{id}', [RestaurantController::class, 'show'])
+        // Negocios (tus clientes)
+        Route::get('negocios', [NegocioController::class, 'index']);
+        Route::post('negocios', [NegocioController::class, 'store']);
+        Route::get('negocios/{id}', [NegocioController::class, 'show'])
             ->where('id', '[0-9]+');
-        Route::put('restaurants/{id}', [RestaurantController::class, 'update'])
+        Route::put('negocios/{id}', [NegocioController::class, 'update'])
             ->where('id', '[0-9]+');
-        Route::post('restaurants/{id}/regenerate-key', [RestaurantController::class, 'regenerateKey'])
+        Route::post('negocios/{id}/regenerate-key', [NegocioController::class, 'regenerateKey'])
             ->where('id', '[0-9]+');
-        Route::delete('restaurants/{id}', [RestaurantController::class, 'destroy'])
+        Route::delete('negocios/{id}', [NegocioController::class, 'destroy'])
             ->where('id', '[0-9]+');
 
         // Despachos globales
         Route::get('despachos', [DespachoController::class, 'index']);
 
-        // Historial GLOBAL del panel admin (todos los restaurantes/motorizados) —
+        // Historial GLOBAL del panel admin (todos los negocios/motorizados) —
         // método distinto al de arriba (historialCentral, no historial), porque
         // ya existía un método `historial()` para el motorizado individual.
         Route::get('despachos/historial', [DespachoController::class, 'historialCentral']);

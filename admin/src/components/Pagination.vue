@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
-import type { PaginationMeta } from '../stores/restaurants'
+import type { PaginationMeta } from '../stores/negocios'
 
 const props = defineProps<{ meta: PaginationMeta }>()
 defineEmits<{ change: [page: number] }>()

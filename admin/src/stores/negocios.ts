@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import api from "../utils/api";
 
-export interface Restaurant {
+export interface Negocio {
   id: number;
   name: string;
   slug: string;
@@ -21,8 +21,8 @@ export interface PaginationMeta {
   per_page: number;
 }
 
-export const useRestaurantsStore = defineStore("restaurants", () => {
-  const restaurants = ref<Restaurant[]>([]);
+export const useNegociosStore = defineStore("negocios", () => {
+  const negocios = ref<Negocio[]>([]);
   const meta = ref<PaginationMeta>({
     current_page: 1,
     last_page: 1,
@@ -41,17 +41,17 @@ export const useRestaurantsStore = defineStore("restaurants", () => {
   ) {
     loading.value = true;
     try {
-      const { data } = await api.get("/admin/restaurants", { params });
-      restaurants.value = data.data.data;
+      const { data } = await api.get("/admin/negocios", { params });
+      negocios.value = data.data.data;
       meta.value = data.data.meta;
     } finally {
       loading.value = false;
     }
   }
 
-  async function getOne(id: number): Promise<Restaurant | null> {
+  async function getOne(id: number): Promise<Negocio | null> {
     try {
-      const { data } = await api.get(`/admin/restaurants/${id}`);
+      const { data } = await api.get(`/admin/negocios/${id}`);
       return data.data;
     } catch {
       return null;
@@ -62,38 +62,36 @@ export const useRestaurantsStore = defineStore("restaurants", () => {
     name: string;
     slug: string;
     webhook_url?: string;
-  }): Promise<{ ok: boolean; data?: Restaurant; message?: string }> {
+  }): Promise<{ ok: boolean; data?: Negocio; message?: string }> {
     try {
-      const { data } = await api.post("/admin/restaurants", payload);
+      const { data } = await api.post("/admin/negocios", payload);
       return { ok: true, data: data.data };
     } catch (e: any) {
       return {
         ok: false,
-        message: e.response?.data?.message ?? "Error al crear restaurante",
+        message: e.response?.data?.message ?? "Error al crear negocio",
       };
     }
   }
 
   async function update(
     id: number,
-    payload: Partial<Restaurant>,
+    payload: Partial<Negocio>,
   ): Promise<boolean> {
     try {
-      const { data } = await api.put(`/admin/restaurants/${id}`, payload);
-      const idx = restaurants.value.findIndex((r) => r.id === id);
+      const { data } = await api.put(`/admin/negocios/${id}`, payload);
+      const idx = negocios.value.findIndex((n) => n.id === id);
       if (idx !== -1)
-        restaurants.value[idx] = { ...restaurants.value[idx], ...data.data };
+        negocios.value[idx] = { ...negocios.value[idx], ...data.data };
       return true;
     } catch {
       return false;
     }
   }
 
-  async function regenerateKey(id: number): Promise<Restaurant | null> {
+  async function regenerateKey(id: number): Promise<Negocio | null> {
     try {
-      const { data } = await api.post(
-        `/admin/restaurants/${id}/regenerate-key`,
-      );
+      const { data } = await api.post(`/admin/negocios/${id}/regenerate-key`);
       return data.data;
     } catch {
       return null;
@@ -102,8 +100,8 @@ export const useRestaurantsStore = defineStore("restaurants", () => {
 
   async function remove(id: number): Promise<boolean> {
     try {
-      await api.delete(`/admin/restaurants/${id}`);
-      restaurants.value = restaurants.value.filter((r) => r.id !== id);
+      await api.delete(`/admin/negocios/${id}`);
+      negocios.value = negocios.value.filter((n) => n.id !== id);
       return true;
     } catch {
       return false;
@@ -111,7 +109,7 @@ export const useRestaurantsStore = defineStore("restaurants", () => {
   }
 
   return {
-    restaurants,
+    negocios,
     meta,
     loading,
     fetchAll,

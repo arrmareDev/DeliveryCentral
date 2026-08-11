@@ -2,12 +2,12 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Restaurant;
+use App\Models\Negocio;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class AuthenticateRestaurant
+class AuthenticateNegocio
 {
     public function handle(Request $request, Closure $next): Response
     {
@@ -20,19 +20,19 @@ class AuthenticateRestaurant
             ], 401);
         }
 
-        $restaurant = Restaurant::where('api_key', $apiKey)
+        $negocio = Negocio::where('api_key', $apiKey)
             ->where('activo', true)
             ->first();
 
-        if (!$restaurant) {
+        if (!$negocio) {
             return response()->json([
                 'success' => false,
-                'message' => 'API key inválida o restaurante inactivo',
+                'message' => 'API key inválida o negocio inactivo',
             ], 401);
         }
 
-        // Inyectamos el restaurante autenticado en el request
-        $request->attributes->set('restaurant', $restaurant);
+        // Inyectamos el negocio autenticado en el request
+        $request->attributes->set('negocio', $negocio);
 
         return $next($request);
     }

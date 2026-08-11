@@ -11,7 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class NotifyRestaurantWebhook implements ShouldQueue
+class NotifyNegocioWebhook implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -22,9 +22,9 @@ class NotifyRestaurantWebhook implements ShouldQueue
 
     public function handle(): void
     {
-        $restaurant = $this->despacho->restaurant;
+        $negocio = $this->despacho->negocio;
 
-        if (!$restaurant?->webhook_url) {
+        if (!$negocio?->webhook_url) {
             return;
         }
 
@@ -47,17 +47,17 @@ class NotifyRestaurantWebhook implements ShouldQueue
             $signature = hash_hmac(
                 'sha256',
                 json_encode($payload),
-                $restaurant->webhook_secret ?? ''
+                $negocio->webhook_secret ?? ''
             );
 
             $response = Http::timeout(10)
                 ->withHeaders(['X-Webhook-Signature' => $signature])
-                ->post($restaurant->webhook_url, $payload);
+                ->post($negocio->webhook_url, $payload);
 
             if (!$response->successful()) {
                 Log::warning('Webhook falló', [
-                    'restaurant' => $restaurant->slug,
-                    'status'     => $response->status(),
+                    'negocio' => $negocio->slug,
+                    'status'  => $response->status(),
                 ]);
             }
         } catch (\Throwable $e) {

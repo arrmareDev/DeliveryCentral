@@ -8,7 +8,6 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 class PedidoDisponible implements ShouldBroadcast
 {
@@ -16,7 +15,7 @@ class PedidoDisponible implements ShouldBroadcast
 
     public function __construct(public Despacho $despacho)
     {
-        $this->despacho->loadMissing('restaurant');
+        $this->despacho->loadMissing('negocio');
     }
 
     public function broadcastOn(): array
@@ -31,18 +30,11 @@ class PedidoDisponible implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
-        Log::info('PedidoDisponible - EJECUTANDO broadcastWith');
-
         $orderData = $this->despacho->order_data ?? [];
-
-        Log::info('PedidoDisponible - payload', [
-            'restaurant_name' => $this->despacho->restaurant?->name,
-            'order_data'      => $orderData,
-        ]);
 
         return [
             'id'                  => $this->despacho->id,
-            'restaurant'          => $this->despacho->restaurant?->name,
+            'negocio'             => $this->despacho->negocio?->name,
             'order_id'            => $this->despacho->external_order_id,
             'estado'              => $this->despacho->estado,
             'comision_motorizado' => (float) $this->despacho->comision_motorizado,

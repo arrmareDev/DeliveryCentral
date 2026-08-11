@@ -17,7 +17,7 @@ Broadcast::channel('admin.despachos', function ($user) {
     return $user instanceof \App\Models\User;
 });
 
-// Canal por restaurante — si en el futuro quieres frontend escuchando directo
-Broadcast::channel('restaurant.{id}', function ($user, $id) {
+// Canal por negocio — si en el futuro quieres frontend escuchando directo
+Broadcast::channel('negocio.{id}', function ($user, $id) {
     return true; // se valida por API key en otra capa si se necesita
 });
