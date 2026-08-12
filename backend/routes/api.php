@@ -3,11 +3,17 @@
 use App\Http\Controllers\Api\ComisionController;
 use App\Http\Controllers\Api\DespachoController;
 use App\Http\Controllers\Api\NegocioController;
+use App\Http\Controllers\Api\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\ReportesController;
 use App\Http\Controllers\Api\NotificacionController;
 use App\Http\Controllers\Api\BusquedaController;
+
+// ══════════════════════════════════════════════════════════
+// ── PÚBLICO ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+Route::get('v1/vapid-public-key', [PushSubscriptionController::class, 'publicKey']);
 
 // ══════════════════════════════════════════════════════════
 // ── NEGOCIOS CLIENTES — autenticados con API key ─────────────
@@ -57,7 +63,10 @@ Route::prefix('v1/motorizado')->group(function () {
         Route::patch('ubicacion', [DespachoController::class, 'updateUbicacion']);
 
         Route::get('pedidos', [DespachoController::class, 'pedidosDisponibles']);
-        Route::get('despachos/activo', [DespachoController::class, 'despachoActivo']);
+        Route::get('despachos/activos', [DespachoController::class, 'despachosActivos']);
+
+        Route::post('push/subscribe', [PushSubscriptionController::class, 'subscribe']);
+        Route::post('push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
 
         Route::post('despachos/{id}/aceptar', [DespachoController::class, 'aceptar'])
             ->where('id', '[0-9]+');

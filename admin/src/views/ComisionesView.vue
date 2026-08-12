@@ -219,7 +219,7 @@
                                             <p class="text-[11px] text-gray-400 dark:text-gray-500 m-0">
                                                 {{ formatFecha(c.created_at) }}
                                                 <span v-if="c.cobrado_at"> · Cobrado {{ formatFecha(c.cobrado_at)
-                                                }}</span>
+                                                    }}</span>
                                             </p>
                                         </div>
                                         <div class="flex items-baseline gap-0.5 shrink-0">

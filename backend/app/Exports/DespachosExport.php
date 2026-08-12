@@ -23,7 +23,7 @@ class DespachosExport implements FromCollection, WithHeadings, WithMapping, With
     {
         return [
             'ID Pedido',
-            'Restaurante',
+            'Negocio',
             'Cliente',
             'Motorizado',
             'Estado',
@@ -41,7 +41,7 @@ class DespachosExport implements FromCollection, WithHeadings, WithMapping, With
 
         return [
             $despacho->external_order_id,
-            $despacho->restaurant?->name ?? '—',
+            $despacho->negocio?->name ?? '—',
             $order['client_name'] ?? '—',
             $despacho->motorizado?->nombre ?? '—',
             ucfirst($despacho->estado),

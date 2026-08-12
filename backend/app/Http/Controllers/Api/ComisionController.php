@@ -58,7 +58,7 @@ class ComisionController extends Controller
         $motorizado = Motorizado::findOrFail($motorizadoId);
         [$desde, $hasta] = $this->resolverRango($request);
 
-        $query = ComisionMotorizado::with('despacho.restaurant')
+        $query = ComisionMotorizado::with('despacho.negocio')
             ->where('motorizado_id', $motorizadoId);
 
         if ($desde && $hasta) {
@@ -81,7 +81,7 @@ class ComisionController extends Controller
             'id'          => $c->id,
             'despacho_id' => $c->despacho_id,
             'order_id'    => $c->despacho?->external_order_id,
-            'restaurant'  => $c->despacho?->restaurant?->name,
+            'negocio'  => $c->despacho?->negocio?->name,
             'monto'       => (float) $c->monto,
             'estado'      => $c->estado,
             'cobrado_at'  => $c->cobrado_at?->toISOString(),

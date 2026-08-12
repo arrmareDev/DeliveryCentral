@@ -1,19 +1,18 @@
 <template>
-    <Transition enter-active-class="transition-opacity duration-150"
-        leave-active-class="transition-opacity duration-100" enter-from-class="opacity-0" leave-to-class="opacity-0">
+    <Transition enter-active-class="transition-opacity duration-150" leave-active-class="transition-opacity duration-100"
+        enter-from-class="opacity-0" leave-to-class="opacity-0">
         <div v-if="open" class="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm flex items-start justify-center
                    pt-[10vh] px-4" @click.self="close">
-            <Transition enter-active-class="transition-all duration-150 ease-out"
-                enter-from-class="opacity-0 scale-95 -translate-y-2" leave-to-class="opacity-0 scale-95">
+            <Transition enter-active-class="transition-all duration-150 ease-out" enter-from-class="opacity-0 scale-95 -translate-y-2"
+                leave-to-class="opacity-0 scale-95">
                 <div v-if="open" class="w-full max-w-xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl
                            border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[70vh]">
 
                     <!-- Input -->
-                    <div
-                        class="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                    <div class="flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 dark:border-gray-800 shrink-0">
                         <MagnifyingGlassIcon class="w-4.5 h-4.5 text-gray-400 dark:text-gray-500 shrink-0" />
-                        <input ref="inputRef" v-model="query" @keydown="onKeydown"
-                            placeholder="Buscar pedido, negocio o motorizado..." class="flex-1 bg-transparent border-none outline-none text-[14px] text-gray-900 dark:text-gray-100
+                        <input ref="inputRef" v-model="query" @keydown="onKeydown" placeholder="Buscar pedido, negocio o motorizado..."
+                            class="flex-1 bg-transparent border-none outline-none text-[14px] text-gray-900 dark:text-gray-100
                                placeholder:text-gray-400 dark:placeholder:text-gray-500" />
                         <kbd class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800
                              text-gray-400 dark:text-gray-500 shrink-0">ESC</kbd>
@@ -22,34 +21,29 @@
                     <!-- Resultados -->
                     <div class="flex-1 overflow-y-auto">
                         <div v-if="loading" class="flex flex-col gap-2 p-3">
-                            <div v-for="n in 3" :key="n"
-                                class="h-12 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                            <div v-for="n in 3" :key="n" class="h-12 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
                         </div>
 
-                        <div v-else-if="query.trim().length < 2"
-                            class="py-14 text-center text-gray-400 dark:text-gray-600 text-[13px]">
+                        <div v-else-if="query.trim().length < 2" class="py-14 text-center text-gray-400 dark:text-gray-600 text-[13px]">
                             Escribe al menos 2 caracteres para buscar
                         </div>
 
-                        <div v-else-if="totalResultados === 0"
-                            class="py-14 text-center text-gray-400 dark:text-gray-600 text-[13px]">
+                        <div v-else-if="totalResultados === 0" class="py-14 text-center text-gray-400 dark:text-gray-600 text-[13px]">
                             Sin resultados para "{{ query }}"
                         </div>
 
                         <div v-else class="py-2">
                             <div v-if="resultados.despachos.length" class="mb-1">
-                                <p
-                                    class="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                <p class="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
                                     Despachos
                                 </p>
-                                <button v-for="(item, i) in resultados.despachos" :key="'d-' + item.id" ref="itemRefs"
-                                    @click="ir('despacho', item)" :class="rowClass(flatIndex('despachos', i))" class="w-full text-left px-4 py-2.5 flex items-center justify-between gap-2
+                                <button v-for="(item, i) in resultados.despachos" :key="'d-' + item.id"
+                                    ref="itemRefs" @click="ir('despacho', item)" :class="rowClass(flatIndex('despachos', i))"
+                                    class="w-full text-left px-4 py-2.5 flex items-center justify-between gap-2
                                        border-none bg-transparent cursor-pointer transition-colors">
                                     <div class="min-w-0">
-                                        <p class="text-[13px] font-bold text-gray-900 dark:text-gray-100 m-0 truncate">
-                                            {{ item.titulo }}</p>
-                                        <p class="text-[11.5px] text-gray-400 dark:text-gray-500 m-0 truncate">{{
-                                            item.subtitulo }}</p>
+                                        <p class="text-[13px] font-bold text-gray-900 dark:text-gray-100 m-0 truncate">{{ item.titulo }}</p>
+                                        <p class="text-[11.5px] text-gray-400 dark:text-gray-500 m-0 truncate">{{ item.subtitulo }}</p>
                                     </div>
                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
                                         :class="despachoCls(item.estado)">
@@ -59,33 +53,28 @@
                             </div>
 
                             <div v-if="resultados.negocios.length" class="mb-1">
-                                <p
-                                    class="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                <p class="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
                                     Negocios
                                 </p>
-                                <button v-for="(item, i) in resultados.negocios" :key="'r-' + item.id" ref="itemRefs"
-                                    @click="ir('negocio', item)" :class="rowClass(flatIndex('negocios', i))" class="w-full text-left px-4 py-2.5 flex flex-col border-none bg-transparent
+                                <button v-for="(item, i) in resultados.negocios" :key="'r-' + item.id"
+                                    ref="itemRefs" @click="ir('negocio', item)" :class="rowClass(flatIndex('negocios', i))"
+                                    class="w-full text-left px-4 py-2.5 flex flex-col border-none bg-transparent
                                        cursor-pointer transition-colors">
-                                    <p class="text-[13px] font-bold text-gray-900 dark:text-gray-100 m-0">{{ item.titulo
-                                        }}</p>
-                                    <p class="text-[11.5px] text-gray-400 dark:text-gray-500 m-0">{{ item.subtitulo }}
-                                    </p>
+                                    <p class="text-[13px] font-bold text-gray-900 dark:text-gray-100 m-0">{{ item.titulo }}</p>
+                                    <p class="text-[11.5px] text-gray-400 dark:text-gray-500 m-0">{{ item.subtitulo }}</p>
                                 </button>
                             </div>
 
                             <div v-if="resultados.motorizados.length">
-                                <p
-                                    class="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                <p class="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
                                     Motorizados
                                 </p>
-                                <button v-for="(item, i) in resultados.motorizados" :key="'m-' + item.id" ref="itemRefs"
-                                    @click="ir('motorizado', item)" :class="rowClass(flatIndex('motorizados', i))"
+                                <button v-for="(item, i) in resultados.motorizados" :key="'m-' + item.id"
+                                    ref="itemRefs" @click="ir('motorizado', item)" :class="rowClass(flatIndex('motorizados', i))"
                                     class="w-full text-left px-4 py-2.5 flex flex-col border-none bg-transparent
                                        cursor-pointer transition-colors">
-                                    <p class="text-[13px] font-bold text-gray-900 dark:text-gray-100 m-0">{{ item.titulo
-                                        }}</p>
-                                    <p class="text-[11.5px] text-gray-400 dark:text-gray-500 m-0">{{ item.subtitulo }}
-                                    </p>
+                                    <p class="text-[13px] font-bold text-gray-900 dark:text-gray-100 m-0">{{ item.titulo }}</p>
+                                    <p class="text-[11.5px] text-gray-400 dark:text-gray-500 m-0">{{ item.subtitulo }}</p>
                                 </button>
                             </div>
                         </div>
@@ -94,10 +83,8 @@
                     <!-- Footer con atajos -->
                     <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-800 flex items-center gap-3 shrink-0
                                 text-[10.5px] text-gray-400 dark:text-gray-500">
-                        <span class="flex items-center gap-1"><kbd
-                                class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800">↑↓</kbd> navegar</span>
-                        <span class="flex items-center gap-1"><kbd
-                                class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800">↵</kbd> abrir</span>
+                        <span class="flex items-center gap-1"><kbd class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800">↑↓</kbd> navegar</span>
+                        <span class="flex items-center gap-1"><kbd class="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800">↵</kbd> abrir</span>
                     </div>
                 </div>
             </Transition>

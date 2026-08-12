@@ -69,7 +69,7 @@ class ReportesController extends Controller
 
     private function consultarDespachos(Request $request)
     {
-        $query = Despacho::with(['restaurant', 'motorizado']);
+        $query = Despacho::with(['negocio', 'motorizado']);
 
         if ($request->filled('desde') && $request->filled('hasta')) {
             $desde = Carbon::parse($request->query('desde'))->startOfDay();
@@ -81,8 +81,8 @@ class ReportesController extends Controller
             $query->where('estado', $request->query('estado'));
         }
 
-        if ($request->filled('restaurant_id')) {
-            $query->where('restaurant_id', $request->query('restaurant_id'));
+        if ($request->filled('negocio_id')) {
+            $query->where('negocio_id', $request->query('negocio_id'));
         }
 
         if ($request->filled('motorizado_id')) {
@@ -94,7 +94,7 @@ class ReportesController extends Controller
 
     private function consultarComisiones(Request $request)
     {
-        $query = ComisionMotorizado::with(['motorizado', 'despacho.restaurant']);
+        $query = ComisionMotorizado::with(['motorizado', 'despacho.negocio']);
 
         if ($request->filled('desde') && $request->filled('hasta')) {
             $desde = Carbon::parse($request->query('desde'))->startOfDay();

@@ -151,7 +151,8 @@
                                 tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
                                         Slug (identificador único) *
                                     </label>
-                                    <input v-model="form.slug" placeholder="mi-negocio" class="modal-input font-mono" />
+                                    <input v-model="form.slug" placeholder="mi-negocio"
+                                        class="modal-input font-mono" />
                                     <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                                         Solo letras minúsculas, números y guiones
                                     </p>

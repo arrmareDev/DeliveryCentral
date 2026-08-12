@@ -24,7 +24,7 @@ class ComisionesExport implements FromCollection, WithHeadings, WithMapping, Wit
         return [
             'Motorizado',
             'Pedido',
-            'Restaurante',
+            'Negocio',
             'Monto (S/)',
             'Estado',
             'Generado',
@@ -37,7 +37,7 @@ class ComisionesExport implements FromCollection, WithHeadings, WithMapping, Wit
         return [
             $comision->motorizado?->nombre ?? '—',
             $comision->despacho?->external_order_id ?? '—',
-            $comision->despacho?->restaurant?->name ?? '—',
+            $comision->despacho?->negocio?->name ?? '—',
             number_format($comision->monto, 2),
             ucfirst($comision->estado),
             $comision->created_at?->format('d/m/Y H:i') ?? '—',

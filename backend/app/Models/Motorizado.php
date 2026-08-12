@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class Motorizado extends Authenticatable implements MustVerifyEmailContract
 {
-    use HasFactory, HasApiTokens, Notifiable, MustVerifyEmail;
+    use HasFactory, HasApiTokens, Notifiable, MustVerifyEmail, HasPushSubscriptions;
 
     protected $fillable = [
         'nombre',

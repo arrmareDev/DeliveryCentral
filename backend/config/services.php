@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'motorizado' => [
+        // Cuántos pedidos puede tener activos al mismo tiempo un solo
+        // motorizado. Un solo lugar para cambiarlo — nunca "3" quemado
+        // en el código.
+        'max_despachos_simultaneos' => env('MAX_DESPACHOS_SIMULTANEOS', 3),
+    ],
+
 ];
