@@ -83,7 +83,7 @@
             <tr>
                 <th>Motorizado</th>
                 <th>Pedido</th>
-                <th>Restaurante</th>
+                <th>Negocio</th>
                 <th>Monto</th>
                 <th>Estado</th>
                 <th>Generado</th>
@@ -95,7 +95,7 @@
                 <tr>
                     <td>{{ $c->motorizado?->nombre ?? '—' }}</td>
                     <td>#{{ $c->despacho?->external_order_id ?? '—' }}</td>
-                    <td>{{ $c->despacho?->restaurant?->name ?? '—' }}</td>
+                    <td>{{ $c->despacho?->negocio?->name ?? '—' }}</td>
                     <td>S/ {{ number_format($c->monto, 2) }}</td>
                     <td>{{ ucfirst($c->estado) }}</td>
                     <td>{{ $c->created_at?->format('d/m/Y H:i') ?? '—' }}</td>

@@ -69,7 +69,7 @@
         <thead>
             <tr>
                 <th>Pedido</th>
-                <th>Restaurante</th>
+                <th>Negocio</th>
                 <th>Cliente</th>
                 <th>Motorizado</th>
                 <th>Estado</th>
@@ -84,7 +84,7 @@
                 @php $order = $d->order_data ?? []; @endphp
                 <tr>
                     <td>#{{ $d->external_order_id }}</td>
-                    <td>{{ $d->restaurant?->name ?? '—' }}</td>
+                    <td>{{ $d->negocio?->name ?? '—' }}</td>
                     <td>{{ $order['client_name'] ?? '—' }}</td>
                     <td>{{ $d->motorizado?->nombre ?? '—' }}</td>
                     <td class="estado-{{ $d->estado }}">{{ ucfirst($d->estado) }}</td>

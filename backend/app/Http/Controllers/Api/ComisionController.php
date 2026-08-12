@@ -74,7 +74,7 @@ class ComisionController extends Controller
             ->where('estado', 'pendiente')
             ->sum('monto');
 
-        $perPage = min((int) $request->query('per_page', 15), 50);
+        $perPage = min((int) $request->query('per_page', 12), 50);
         $paginated = $query->orderByDesc('created_at')->paginate($perPage);
 
         $comisiones = collect($paginated->items())->map(fn($c) => [

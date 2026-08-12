@@ -576,15 +576,23 @@ class DespachoController extends Controller
     // GET /v1/motorizado/historial
     public function historial(Request $request): JsonResponse
     {
-        $despachos = Despacho::with('negocio')
+        $perPage = min((int) $request->query('per_page', 12), 50);
+
+        $paginated = Despacho::with('negocio')
             ->where('motorizado_id', $request->user()->id)
             ->where('estado', 'entregado')
             ->orderByDesc('entregado_at')
-            ->limit(50)
-            ->get()
-            ->map(fn($d) => $this->formatDespacho($d));
+            ->paginate($perPage);
 
-        return $this->success($despachos);
+        return $this->success([
+            'data' => collect($paginated->items())->map(fn($d) => $this->formatDespacho($d)),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'total'        => $paginated->total(),
+                'per_page'     => $paginated->perPage(),
+            ],
+        ]);
     }
 
     // ════════════════════════════════════════════════════════
@@ -653,7 +661,7 @@ class DespachoController extends Controller
 
         $query->orderByDesc('created_at');
 
-        $perPage = min((int) $request->query('per_page', 10), 50);
+        $perPage = min((int) $request->query('per_page', 12), 50);
         $paginated = $query->paginate($perPage);
 
         return $this->success([
@@ -818,7 +826,7 @@ class DespachoController extends Controller
         $sortDir = $request->query('sort_dir', 'desc') === 'asc' ? 'asc' : 'desc';
         $query->orderBy('created_at', $sortDir);
 
-        $perPage = min((int) $request->query('per_page', 15), 50);
+        $perPage = min((int) $request->query('per_page', 12), 50);
         $paginated = $query->paginate($perPage);
 
         return $this->success([
