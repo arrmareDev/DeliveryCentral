@@ -26,6 +26,11 @@ class DespachoActualizado implements ShouldBroadcast
             $channels[] = new Channel("motorizado.{$this->despacho->motorizado_id}");
         }
 
+        // En cuanto el despacho deja de estar "solicitado" (alguien lo
+        // aceptó, o se canceló), avisamos al canal compartido de todos
+        // los motorizados — así desaparece al instante de la lista de
+        // "disponibles" de los demás, sin que tengan que intentar
+        // aceptarlo para recién enterarse de que ya no está.
         if ($this->despacho->estado !== 'solicitado') {
             $channels[] = new Channel('motorizados');
         }
