@@ -25,7 +25,7 @@ class NuevoPedidoDisponibleNotification extends Notification
         return (new WebPushMessage)
             ->title('🛵 Nuevo pedido disponible')
             ->icon('/manifest-icon-192.maskable.png')
-            ->body("{$negocio}" . ($distrito ? " · {$distrito}" : '') . " · Ganas S/ " . number_format((float) $this->despacho->comision_motorizado, 2))
+            ->body("{$negocio}" . ($distrito ? " · {$distrito}" : ''))
             ->action('Ver pedido', 'ver_pedido')
             ->data(['url' => '/'])
             ->options(['TTL' => 120]);
