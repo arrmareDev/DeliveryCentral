@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\ComisionController;
-use App\Http\Controllers\Api\DespachoController;
+use App\Http\Controllers\Api\NegocioDespachoController;
+use App\Http\Controllers\Api\MotorizadoAuthController;
+use App\Http\Controllers\Api\MotorizadoDespachoController;
+use App\Http\Controllers\Api\AdminDespachoController;
 use App\Http\Controllers\Api\NegocioController;
 use App\Http\Controllers\Api\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
@@ -21,10 +24,10 @@ Route::get('v1/vapid-public-key', [PushSubscriptionController::class, 'publicKey
 Route::prefix('v1')
     ->middleware(['negocio.auth', 'throttle:120,1'])
     ->group(function () {
-        Route::post('despachos/solicitar', [DespachoController::class, 'solicitar']);
-        Route::get('despachos/{order_id}/estado', [DespachoController::class, 'estadoPorOrderId'])
+        Route::post('despachos/solicitar', [NegocioDespachoController::class, 'solicitar']);
+        Route::get('despachos/{order_id}/estado', [NegocioDespachoController::class, 'estadoPorOrderId'])
             ->where('order_id', '[0-9]+');
-        Route::post('despachos/{order_id}/cancelar', [DespachoController::class, 'cancelarPorNegocio'])
+        Route::post('despachos/{order_id}/cancelar', [NegocioDespachoController::class, 'cancelarPorNegocio'])
             ->where('order_id', '[0-9]+');
     });
 
@@ -33,49 +36,49 @@ Route::prefix('v1')
 // ══════════════════════════════════════════════════════════
 Route::prefix('v1/motorizado')->group(function () {
 
-    Route::post('auth/register', [DespachoController::class, 'register'])
+    Route::post('auth/register', [MotorizadoAuthController::class, 'register'])
         ->middleware('throttle:5,1');
-    Route::post('auth/login', [DespachoController::class, 'login'])
+    Route::post('auth/login', [MotorizadoAuthController::class, 'login'])
         ->middleware('throttle:10,1');
 
     // ↓ NUEVO — recuperar contraseña (público, no requiere sesión)
-    Route::post('auth/forgot-password', [DespachoController::class, 'forgotPassword'])
+    Route::post('auth/forgot-password', [MotorizadoAuthController::class, 'forgotPassword'])
         ->middleware('throttle:5,1');
-    Route::post('auth/reset-password', [DespachoController::class, 'resetPassword'])
+    Route::post('auth/reset-password', [MotorizadoAuthController::class, 'resetPassword'])
         ->middleware('throttle:5,1');
 
     // ↓ NUEVO — el enlace del correo de verificación llega aquí directo,
     // no pasa por el SPA. Protegido por firma (signed), no por Sanctum.
-    Route::get('auth/verify-email/{id}/{hash}', [DespachoController::class, 'verifyEmail'])
+    Route::get('auth/verify-email/{id}/{hash}', [MotorizadoAuthController::class, 'verifyEmail'])
         ->middleware(['signed', 'throttle:6,1'])
         ->name('motorizado.verification.verify');
 
     Route::middleware(['auth:sanctum', 'throttle:120,1'])->group(function () {
-        Route::post('auth/logout', [DespachoController::class, 'logout']);
-        Route::get('me', [DespachoController::class, 'me']);
-        Route::put('perfil', [DespachoController::class, 'updatePerfil']);
+        Route::post('auth/logout', [MotorizadoAuthController::class, 'logout']);
+        Route::get('me', [MotorizadoAuthController::class, 'me']);
+        Route::put('perfil', [MotorizadoDespachoController::class, 'updatePerfil']);
 
         // ↓ NUEVO — reenviar correo de verificación (requiere estar logueado)
-        Route::post('auth/resend-verification', [DespachoController::class, 'resendVerification'])
+        Route::post('auth/resend-verification', [MotorizadoAuthController::class, 'resendVerification'])
             ->middleware('throttle:3,1');
 
-        Route::patch('estado', [DespachoController::class, 'updateEstado']);
-        Route::patch('ubicacion', [DespachoController::class, 'updateUbicacion']);
+        Route::patch('estado', [MotorizadoDespachoController::class, 'updateEstado']);
+        Route::patch('ubicacion', [MotorizadoDespachoController::class, 'updateUbicacion']);
 
-        Route::get('pedidos', [DespachoController::class, 'pedidosDisponibles']);
-        Route::get('despachos/activos', [DespachoController::class, 'despachosActivos']);
+        Route::get('pedidos', [MotorizadoDespachoController::class, 'pedidosDisponibles']);
+        Route::get('despachos/activos', [MotorizadoDespachoController::class, 'despachosActivos']);
 
         Route::post('push/subscribe', [PushSubscriptionController::class, 'subscribe']);
         Route::post('push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe']);
 
-        Route::post('despachos/{id}/aceptar', [DespachoController::class, 'aceptar'])
+        Route::post('despachos/{id}/aceptar', [MotorizadoDespachoController::class, 'aceptar'])
             ->where('id', '[0-9]+');
-        Route::patch('despachos/{id}/estado', [DespachoController::class, 'updateEstadoDespacho'])
+        Route::patch('despachos/{id}/estado', [MotorizadoDespachoController::class, 'updateEstadoDespacho'])
             ->where('id', '[0-9]+');
 
         // Historial PERSONAL del motorizado (sus propias entregas) —
         // no confundir con el historial global del panel admin de abajo.
-        Route::get('historial', [DespachoController::class, 'historial']);
+        Route::get('historial', [MotorizadoDespachoController::class, 'historial']);
     });
 });
 
@@ -99,21 +102,21 @@ Route::prefix('v1/admin')
             ->where('id', '[0-9]+');
 
         // Despachos globales
-        Route::get('despachos', [DespachoController::class, 'index']);
+        Route::get('despachos', [AdminDespachoController::class, 'index']);
 
         // Historial GLOBAL del panel admin (todos los negocios/motorizados) —
         // método distinto al de arriba (historialCentral, no historial), porque
         // ya existía un método `historial()` para el motorizado individual.
-        Route::get('despachos/historial', [DespachoController::class, 'historialCentral']);
+        Route::get('despachos/historial', [AdminDespachoController::class, 'historialCentral']);
 
-        Route::post('despachos/{id}/cancelar', [DespachoController::class, 'cancelar'])
+        Route::post('despachos/{id}/cancelar', [AdminDespachoController::class, 'cancelar'])
             ->where('id', '[0-9]+');
 
         // Motorizados
-        Route::get('motorizados', [DespachoController::class, 'motorizados']);
-        Route::patch('motorizados/{id}/verificar', [DespachoController::class, 'verificar'])
+        Route::get('motorizados', [AdminDespachoController::class, 'motorizados']);
+        Route::patch('motorizados/{id}/verificar', [AdminDespachoController::class, 'verificar'])
             ->where('id', '[0-9]+');
-        Route::patch('motorizados/{id}/toggle-activo', [DespachoController::class, 'toggleActivo'])
+        Route::patch('motorizados/{id}/toggle-activo', [AdminDespachoController::class, 'toggleActivo'])
             ->where('id', '[0-9]+');
 
         // Comisiones
@@ -140,7 +143,6 @@ Route::prefix('v1/admin')
 
         //Buscar general
         Route::get('buscar', [BusquedaController::class, 'index']);
-
     });
 
 // ══════════════════════════════════════════════════════════
