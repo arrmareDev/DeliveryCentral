@@ -130,14 +130,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type Echo from 'laravel-echo'
 import {
     TruckIcon, Bars3Icon, XMarkIcon, ArrowRightStartOnRectangleIcon,
-    HomeIcon, BuildingStorefrontIcon, UserGroupIcon,
+    HomeIcon, BuildingStorefrontIcon, UserGroupIcon, MapIcon,
     ClipboardDocumentListIcon, BanknotesIcon, Cog6ToothIcon,
     SunIcon, MoonIcon, MagnifyingGlassIcon,
 } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '../stores/auth'
-import { useDespachosStore } from '../stores/despachos'
+import { useDespachosStore, type DespachoActualizadoPayload } from '../stores/despachos'
 import { useThemeStore } from '../stores/theme'
 import { useEcho } from '../composables/useHecho.ts'
 import ConfirmModal from '../components/ConfirmModal.vue'
@@ -160,6 +161,7 @@ const NAV_ITEMS = [
     { to: '/', label: 'Dashboard', icon: HomeIcon },
     { to: '/negocios', label: 'Negocios', icon: BuildingStorefrontIcon },
     { to: '/motorizados', label: 'Motorizados', icon: UserGroupIcon },
+    { to: '/zonas', label: 'Zonas', icon: MapIcon },
     { to: '/despachos', label: 'Despachos', icon: ClipboardDocumentListIcon, badge: () => despachos.stats.total_activos },
     { to: '/comisiones', label: 'Comisiones', icon: BanknotesIcon },
     { to: '/configuracion', label: 'Configuración', icon: Cog6ToothIcon },
@@ -169,6 +171,7 @@ const TITLES: Record<string, string> = {
     dashboard: 'Dashboard',
     negocios: 'Negocios',
     motorizados: 'Motorizados',
+    zonas: 'Zonas',
     despachos: 'Despachos',
     comisiones: 'Comisiones',
     configuracion: 'Configuración',
@@ -189,13 +192,13 @@ async function handleLogout() {
 }
 
 // ── WebSocket global para badge de despachos activos ──────
-let echo: any = null
+let echo: Echo<"reverb"> | null = null
 
 onMounted(async () => {
     await despachos.fetchAll()
     echo = useEcho()
     echo.channel('admin.despachos')
-        .listen('.despacho.actualizado', (data: any) => {
+        .listen('.despacho.actualizado', (data: DespachoActualizadoPayload) => {
             despachos.handleRealtimeUpdate(data)
         })
 })
