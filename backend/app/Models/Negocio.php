@@ -18,11 +18,16 @@ class Negocio extends Model
         'api_key',
         'webhook_url',
         'webhook_secret',
+        'direccion',
+        'lat',
+        'lng',
         'activo',
     ];
 
     protected $casts = [
         'activo' => 'boolean',
+        'lat'    => 'float',
+        'lng'    => 'float',
     ];
 
     public static function generateApiKey(): string

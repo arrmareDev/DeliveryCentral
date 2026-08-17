@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\MotorizadoAuthController;
 use App\Http\Controllers\Api\MotorizadoDespachoController;
 use App\Http\Controllers\Api\AdminDespachoController;
 use App\Http\Controllers\Api\NegocioController;
+use App\Http\Controllers\Api\ZonaController;
+use App\Http\Controllers\Api\DescuentoMotorizadoController;
 use App\Http\Controllers\Api\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AnalyticsController;
@@ -79,6 +81,7 @@ Route::prefix('v1/motorizado')->group(function () {
         // Historial PERSONAL del motorizado (sus propias entregas) —
         // no confundir con el historial global del panel admin de abajo.
         Route::get('historial', [MotorizadoDespachoController::class, 'historial']);
+        Route::get('estadisticas', [MotorizadoDespachoController::class, 'estadisticas']);
     });
 });
 
@@ -101,6 +104,18 @@ Route::prefix('v1/admin')
         Route::delete('negocios/{id}', [NegocioController::class, 'destroy'])
             ->where('id', '[0-9]+');
 
+        // Zonas de cobertura + motorizados asignados
+        Route::get('zonas', [ZonaController::class, 'index']);
+        Route::post('zonas', [ZonaController::class, 'store']);
+        Route::get('zonas/{id}', [ZonaController::class, 'show'])
+            ->where('id', '[0-9]+');
+        Route::put('zonas/{id}', [ZonaController::class, 'update'])
+            ->where('id', '[0-9]+');
+        Route::delete('zonas/{id}', [ZonaController::class, 'destroy'])
+            ->where('id', '[0-9]+');
+        Route::post('zonas/{id}/motorizados', [ZonaController::class, 'sincronizarMotorizados'])
+            ->where('id', '[0-9]+');
+
         // Despachos globales
         Route::get('despachos', [AdminDespachoController::class, 'index']);
 
@@ -112,11 +127,23 @@ Route::prefix('v1/admin')
         Route::post('despachos/{id}/cancelar', [AdminDespachoController::class, 'cancelar'])
             ->where('id', '[0-9]+');
 
+        Route::post('despachos/{id}/asignar', [AdminDespachoController::class, 'asignar'])
+            ->where('id', '[0-9]+');
+
         // Motorizados
+        Route::get('motorizados/disponibles', [AdminDespachoController::class, 'motorizadosDisponibles']);
         Route::get('motorizados', [AdminDespachoController::class, 'motorizados']);
         Route::patch('motorizados/{id}/verificar', [AdminDespachoController::class, 'verificar'])
             ->where('id', '[0-9]+');
         Route::patch('motorizados/{id}/toggle-activo', [AdminDespachoController::class, 'toggleActivo'])
+            ->where('id', '[0-9]+');
+
+        // Descuentos al motorizado (faltas)
+        Route::get('motorizados/{id}/descuentos', [DescuentoMotorizadoController::class, 'index'])
+            ->where('id', '[0-9]+');
+        Route::post('motorizados/{id}/descuentos', [DescuentoMotorizadoController::class, 'store'])
+            ->where('id', '[0-9]+');
+        Route::delete('descuentos/{id}', [DescuentoMotorizadoController::class, 'destroy'])
             ->where('id', '[0-9]+');
 
         // Comisiones
@@ -135,6 +162,8 @@ Route::prefix('v1/admin')
         Route::get('reportes/despachos/excel', [ReportesController::class, 'despachosExcel']);
         Route::get('reportes/comisiones/pdf', [ReportesController::class, 'comisionesPdf']);
         Route::get('reportes/comisiones/excel', [ReportesController::class, 'comisionesExcel']);
+        Route::get('reportes/motorizados/pdf', [ReportesController::class, 'motorizadosPdf']);
+        Route::get('reportes/motorizados/excel', [ReportesController::class, 'motorizadosExcel']);
 
         Route::get('notificaciones', [NotificacionController::class, 'index']);
         Route::patch('notificaciones/{id}/leer', [NotificacionController::class, 'leer'])

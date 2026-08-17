@@ -113,9 +113,11 @@
 
                 <div v-else class="flex flex-col gap-3">
                     <TransitionGroup name="despacho">
-                        <div v-for="d in store.activos" :key="d.id" class="bg-white dark:bg-gray-900 rounded-2xl border-2 border-gray-100 dark:border-gray-800
-                   shadow-sm dark:shadow-none overflow-hidden
-                   hover:border-blue-200 dark:hover:border-blue-500/30 transition-all duration-150">
+                        <div v-for="d in store.activos" :key="d.id" @click="openDetalle(d)" class="rounded-2xl border-2 shadow-sm dark:shadow-none overflow-hidden cursor-pointer
+                   transition-all duration-150"
+                            :class="esVencido(d)
+                                ? 'bg-red-50/60 dark:bg-red-500/5 border-red-300 dark:border-red-500/40 hover:border-red-400'
+                                : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-blue-200 dark:hover:border-blue-500/30'">
                             <div class="p-4">
 
                                 <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -133,10 +135,17 @@
                                             class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border">
                                             {{ despachoLabel(d.estado) }}
                                         </span>
+                                        <span v-if="esVencido(d)" class="flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full
+                                     bg-red-100 text-red-700 border border-red-300
+                                     dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30">
+                                            <ExclamationTriangleIcon class="w-3 h-3" />
+                                            Sin aceptar hace {{ minutosSinAceptar(d) }} min
+                                        </span>
                                     </div>
                                     <span class="text-[11.5px] text-gray-400 dark:text-gray-500">{{
                                         formatFecha(d.solicitado_at) }}</span>
                                 </div>
+
 
                                 <div class="grid sm:grid-cols-2 gap-4">
                                     <div>
@@ -180,15 +189,24 @@
                                                 </a>
                                             </div>
                                         </div>
-                                        <div v-else class="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                                            <ClockIcon class="w-4 h-4 shrink-0" />
-                                            <span class="text-[12.5px] font-medium">Esperando motorizado...</span>
+                                        <div v-else class="flex flex-col items-start gap-2">
+                                            <div class="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                                                <ClockIcon class="w-4 h-4 shrink-0" />
+                                                <span class="text-[12.5px] font-medium">Esperando motorizado...</span>
+                                            </div>
+                                            <button @click.stop="openAsignar(d)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold
+                                     border cursor-pointer border-blue-200 text-blue-600 bg-blue-50
+                                     hover:bg-blue-100 dark:border-blue-500/20 dark:text-blue-400 dark:bg-blue-500/10 dark:hover:bg-blue-500/20
+                                     transition-all duration-150">
+                                                <UserPlusIcon class="w-3.5 h-3.5" />
+                                                Asignar motorizado
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="flex justify-end mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                                    <button @click="askCancel(d)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold
+                                    <button @click.stop="askCancel(d)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold
                          border cursor-pointer border-red-200 text-red-500 bg-red-50
                          hover:bg-red-100 dark:border-red-500/20 dark:text-red-400 dark:bg-red-500/10 dark:hover:bg-red-500/20
                          transition-all duration-150">
@@ -365,8 +383,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="d in store.historial" :key="d.id"
-                                class="border-b border-gray-50 dark:border-gray-800/60 last:border-0 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
+                            <tr v-for="d in store.historial" :key="d.id" @click="openDetalle(d)"
+                                class="border-b border-gray-50 dark:border-gray-800/60 last:border-0 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors cursor-pointer">
                                 <td
                                     class="px-4 py-3 text-[12.5px] font-mono font-bold text-gray-700 dark:text-gray-300">
                                     #{{ d.order_id }}</td>
@@ -404,6 +422,277 @@
             </div>
         </template>
 
+        <!-- ══ MODAL DETALLE — despacho completo con productos ══ -->
+        <Teleport to="body">
+            <Transition enter-active-class="transition-opacity duration-200"
+                leave-active-class="transition-opacity duration-150" enter-from-class="opacity-0"
+                leave-to-class="opacity-0">
+                <div v-if="detalleModal.show" class="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm
+                     flex items-center justify-center p-4" @click.self="detalleModal.show = false">
+                    <Transition enter-active-class="transition-all duration-200 ease-out"
+                        enter-from-class="opacity-0 scale-95" leave-to-class="opacity-0 scale-95">
+                        <div v-if="detalleModal.show && detalleModal.despacho" class="w-full max-w-lg bg-white dark:bg-gray-900 rounded-3xl shadow-2xl
+                             max-h-[88vh] flex flex-col overflow-hidden">
+
+                            <div
+                                class="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between gap-3 shrink-0">
+                                <div>
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <span class="text-[13px] font-black font-mono px-2 py-0.5 rounded-lg
+                                     bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900">
+                                            #{{ detalleModal.despacho.order_id }}
+                                        </span>
+                                        <span :class="despachoCls(detalleModal.despacho.estado)"
+                                            class="text-[10.5px] font-bold px-2 py-0.5 rounded-full border">
+                                            {{ despachoLabel(detalleModal.despacho.estado) }}
+                                        </span>
+                                    </div>
+                                    <h3 class="font-black text-[17px] text-gray-900 dark:text-gray-100 m-0"
+                                        style="font-family:'Plus Jakarta Sans',sans-serif;">
+                                        {{ detalleModal.despacho.negocio ?? 'Despacho' }}
+                                    </h3>
+                                </div>
+                                <button @click="detalleModal.show = false"
+                                    class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center
+                                     cursor-pointer border-none hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0">
+                                    <XMarkIcon class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                </button>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+
+                                <!-- Recoger en -->
+                                <div v-if="detalleModal.despacho.negocio_direccion"
+                                    class="px-3.5 py-2.5 rounded-2xl bg-purple-50 dark:bg-purple-500/10 border border-purple-100 dark:border-purple-500/20">
+                                    <p
+                                        class="text-[10px] font-black uppercase tracking-widest text-purple-500 dark:text-purple-400 m-0 mb-0.5">
+                                        Recoger en</p>
+                                    <p class="text-[13px] font-bold text-gray-900 dark:text-gray-100 m-0">{{
+                                        detalleModal.despacho.negocio_direccion }}</p>
+                                </div>
+
+                                <!-- Cliente -->
+                                <div>
+                                    <p
+                                        class="text-[10.5px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                                        Cliente</p>
+                                    <p class="font-bold text-[14px] text-gray-900 dark:text-gray-100 m-0">{{
+                                        detalleModal.despacho.order?.client_name ?? '—' }}</p>
+                                    <a v-if="detalleModal.despacho.order?.client_phone"
+                                        :href="`https://wa.me/51${detalleModal.despacho.order.client_phone.replace(/\D/g, '')}`"
+                                        target="_blank"
+                                        class="text-[12.5px] text-green-600 dark:text-green-400 no-underline hover:underline font-medium">
+                                        {{ detalleModal.despacho.order.client_phone }}
+                                    </a>
+                                    <p
+                                        class="text-[12.5px] text-gray-500 dark:text-gray-400 m-0 mt-1 flex items-start gap-1.5">
+                                        <MapPinIcon class="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                        {{ detalleModal.despacho.order?.address }}, {{
+                                        detalleModal.despacho.order?.district }}
+                                    </p>
+                                    <p v-if="detalleModal.despacho.order?.reference"
+                                        class="text-[12px] text-amber-600 dark:text-amber-400 m-0 mt-0.5 ml-5">
+                                        Ref: {{ detalleModal.despacho.order.reference }}
+                                    </p>
+                                </div>
+
+                                <!-- Productos -->
+                                <div>
+                                    <p
+                                        class="text-[10.5px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                                        Productos</p>
+                                    <div class="flex flex-col gap-2 bg-gray-50 dark:bg-gray-800/60 rounded-2xl p-3">
+                                        <div v-for="(item, i) in detalleModal.despacho.order?.items ?? []" :key="i"
+                                            class="flex items-center justify-between gap-2 text-[13px]">
+                                            <div class="min-w-0">
+                                                <p class="m-0 text-gray-900 dark:text-gray-100">{{ item.qty }}x {{
+                                                    item.name }}
+                                                </p>
+                                                <p v-if="item.custom_summary"
+                                                    class="m-0 text-[11.5px] text-gray-400 dark:text-gray-500">{{
+                                                    item.custom_summary }}</p>
+                                            </div>
+                                            <span v-if="item.subtotal"
+                                                class="font-semibold text-gray-500 dark:text-gray-400 shrink-0">
+                                                S/ {{ Number(item.subtotal).toFixed(2) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Pago -->
+                                <div class="flex flex-col gap-1.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+                                    <div v-if="detalleModal.despacho.order?.subtotal != null"
+                                        class="flex items-center justify-between text-[12.5px]">
+                                        <span class="text-gray-500 dark:text-gray-400">Subtotal</span>
+                                        <span class="text-gray-600 dark:text-gray-300">S/ {{
+                                            Number(detalleModal.despacho.order.subtotal).toFixed(2) }}</span>
+                                    </div>
+                                    <div v-if="detalleModal.despacho.order?.delivery_fee != null"
+                                        class="flex items-center justify-between text-[12.5px]">
+                                        <span class="text-gray-500 dark:text-gray-400">Delivery</span>
+                                        <span class="text-gray-600 dark:text-gray-300">S/ {{
+                                            Number(detalleModal.despacho.order.delivery_fee).toFixed(2) }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span
+                                            class="text-[13px] font-bold text-gray-900 dark:text-gray-100">Total</span>
+                                        <span class="font-black text-[16px] text-gray-900 dark:text-gray-100">S/ {{
+                                            detalleModal.despacho.order?.total?.toFixed(2) ?? '0.00' }}</span>
+                                    </div>
+                                    <span
+                                        class="self-start text-[10.5px] font-bold px-2 py-0.5 rounded-full border mt-1"
+                                        :class="detalleModal.despacho.order?.pagado
+                                            ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
+                                            : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'">
+                                        {{ detalleModal.despacho.order?.pagado ? 'Ya pagado' : 'Por cobrar' }}
+                                    </span>
+                                </div>
+
+                                <!-- Motorizado -->
+                                <div v-if="detalleModal.despacho.motorizado"
+                                    class="pt-2 border-t border-gray-100 dark:border-gray-800">
+                                    <p
+                                        class="text-[10.5px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                                        Motorizado</p>
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center
+                                text-[13px] font-black text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shrink-0">
+                                            {{ detalleModal.despacho.motorizado.nombre.charAt(0).toUpperCase() }}
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-[13px] text-gray-900 dark:text-gray-100 m-0">{{
+                                                detalleModal.despacho.motorizado.nombre }}</p>
+                                            <a :href="`https://wa.me/51${detalleModal.despacho.motorizado.telefono.replace(/\D/g, '')}`"
+                                                target="_blank"
+                                                class="text-[11.5px] text-green-600 dark:text-green-400 no-underline hover:underline font-medium">
+                                                {{ detalleModal.despacho.motorizado.telefono }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Línea de tiempo -->
+                                <div class="pt-2 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-1">
+                                    <div class="flex items-center justify-between text-[11.5px]">
+                                        <span class="text-gray-400 dark:text-gray-500">Solicitado</span>
+                                        <span class="text-gray-600 dark:text-gray-300">{{
+                                            formatFecha(detalleModal.despacho.solicitado_at) }}</span>
+                                    </div>
+                                    <div v-if="detalleModal.despacho.aceptado_at"
+                                        class="flex items-center justify-between text-[11.5px]">
+                                        <span class="text-gray-400 dark:text-gray-500">Aceptado</span>
+                                        <span class="text-gray-600 dark:text-gray-300">{{
+                                            formatFecha(detalleModal.despacho.aceptado_at) }}</span>
+                                    </div>
+                                    <div v-if="detalleModal.despacho.recogido_at"
+                                        class="flex items-center justify-between text-[11.5px]">
+                                        <span class="text-gray-400 dark:text-gray-500">Recogido</span>
+                                        <span class="text-gray-600 dark:text-gray-300">{{
+                                            formatFecha(detalleModal.despacho.recogido_at) }}</span>
+                                    </div>
+                                    <div v-if="detalleModal.despacho.entregado_at"
+                                        class="flex items-center justify-between text-[11.5px]">
+                                        <span class="text-gray-400 dark:text-gray-500">Entregado</span>
+                                        <span class="text-gray-600 dark:text-gray-300">{{
+                                            formatFecha(detalleModal.despacho.entregado_at) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <!-- ══ MODAL ASIGNAR MOTORIZADO ══ -->
+        <Teleport to="body">
+            <Transition enter-active-class="transition-opacity duration-200"
+                leave-active-class="transition-opacity duration-150" enter-from-class="opacity-0"
+                leave-to-class="opacity-0">
+                <div v-if="asignarModal.show" class="fixed inset-0 z-[500] bg-black/50 backdrop-blur-sm
+                     flex items-center justify-center p-4" @click.self="asignarModal.show = false">
+                    <Transition enter-active-class="transition-all duration-200 ease-out"
+                        enter-from-class="opacity-0 scale-95" leave-to-class="opacity-0 scale-95">
+                        <div v-if="asignarModal.show && asignarModal.despacho" class="w-full max-w-sm bg-white dark:bg-gray-900 rounded-3xl shadow-2xl
+                             max-h-[80vh] flex flex-col overflow-hidden">
+
+                            <div
+                                class="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between gap-3 shrink-0">
+                                <div>
+                                    <h3 class="font-black text-[17px] text-gray-900 dark:text-gray-100 m-0"
+                                        style="font-family:'Plus Jakarta Sans',sans-serif;">
+                                        Asignar motorizado
+                                    </h3>
+                                    <p class="text-[12.5px] text-gray-400 dark:text-gray-500 m-0 mt-0.5">
+                                        Pedido #{{ asignarModal.despacho.order_id }} · {{ asignarModal.despacho.negocio
+                                        }}
+                                    </p>
+                                </div>
+                                <button @click="asignarModal.show = false"
+                                    class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center
+                                     cursor-pointer border-none hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0">
+                                    <XMarkIcon class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                </button>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto px-4 py-3">
+                                <div v-if="motorizados.disponiblesLoading" class="flex flex-col gap-2">
+                                    <div v-for="n in 3" :key="n"
+                                        class="h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                                </div>
+
+                                <div v-else-if="motorizados.disponibles.length === 0" class="text-center py-8">
+                                    <p class="text-[13px] text-gray-400 dark:text-gray-500 m-0">
+                                        No hay motorizados verificados y activos disponibles.
+                                    </p>
+                                </div>
+
+                                <div v-else class="flex flex-col gap-2">
+                                    <button v-for="m in motorizados.disponibles" :key="m.id"
+                                        @click="m.puede_recibir && confirmarAsignar(m.id)" :disabled="!m.puede_recibir"
+                                        class="w-full flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition-all duration-150"
+                                        :class="m.puede_recibir
+                                            ? 'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/40'
+                                            : 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40 cursor-not-allowed opacity-60'">
+                                        <div
+                                            class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center
+                                    text-[13px] font-black text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shrink-0">
+                                            {{ m.nombre.charAt(0).toUpperCase() }}
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p
+                                                class="font-bold text-[13.5px] text-gray-900 dark:text-gray-100 m-0 truncate">
+                                                {{
+                                                m.nombre }}</p>
+                                            <p class="text-[11.5px] text-gray-400 dark:text-gray-500 m-0">
+                                                {{ m.activos }}/{{ m.max }} pedidos activos
+                                                <span v-if="!m.puede_recibir" class="text-red-500 dark:text-red-400">·
+                                                    al
+                                                    máximo</span>
+                                            </p>
+                                        </div>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                                            :class="m.estado === 'disponible'
+                                                ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
+                                                : 'bg-gray-100 text-gray-500 border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'">
+                                            {{ m.estado }}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <p v-if="asignarModal.error"
+                                    class="text-[12.5px] text-red-600 dark:text-red-400 text-center mt-3 mb-1">
+                                    {{ asignarModal.error }}
+                                </p>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+            </Transition>
+        </Teleport>
+
         <CancelarDespachoModal v-model="confirmCancel.show"
             :message="`El despacho del pedido #${confirmCancel.target?.order_id} de ${confirmCancel.target?.negocio} será cancelado y el motorizado quedará disponible nuevamente.`"
             :loading="confirmCancel.loading" @confirm="executeCancel" />
@@ -412,11 +701,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
+import type Echo from 'laravel-echo'
 import {
     TruckIcon, MapPinIcon, ClockIcon, CheckCircleIcon, XCircleIcon, ArrowPathIcon,
-    MagnifyingGlassIcon, ClipboardDocumentListIcon, ChevronUpIcon, ChevronDownIcon,
+    MagnifyingGlassIcon, ClipboardDocumentListIcon, ChevronUpIcon, ChevronDownIcon, XMarkIcon,
+    UserPlusIcon, ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline'
-import { useDespachosStore, type DespachoItem } from '../stores/despachos'
+import { useDespachosStore, type DespachoItem, type DespachoActualizadoPayload } from '../stores/despachos'
 import { useNegociosStore } from '../stores/negocios'
 import { useMotorizadosStore } from '../stores/motorizados'
 import { useEcho } from '../composables/useHecho.ts'
@@ -430,6 +721,36 @@ const negocios = useNegociosStore()
 const motorizados = useMotorizadosStore()
 const toast = useToastStore()
 const negocioFilter = ref<number | undefined>(undefined)
+
+// ── Modal de detalle ───────────────────────────────────────
+const detalleModal = reactive({ show: false, despacho: null as DespachoItem | null })
+
+function openDetalle(d: DespachoItem) {
+    detalleModal.despacho = d
+    detalleModal.show = true
+}
+
+// ── Modal de asignar motorizado ─────────────────────────────
+const asignarModal = reactive({ show: false, despacho: null as DespachoItem | null, error: '' })
+
+async function openAsignar(d: DespachoItem) {
+    asignarModal.despacho = d
+    asignarModal.error = ''
+    asignarModal.show = true
+    await motorizados.fetchDisponibles()
+}
+
+async function confirmarAsignar(motorizadoId: number) {
+    if (!asignarModal.despacho) return
+    asignarModal.error = ''
+    const result = await store.asignar(asignarModal.despacho.id, motorizadoId)
+    if (result.ok) {
+        asignarModal.show = false
+        toast.success('Motorizado asignado')
+    } else {
+        asignarModal.error = result.message ?? 'No se pudo asignar el pedido'
+    }
+}
 
 // ── Tabs ───────────────────────────────────────────────────
 const tab = ref<'vivo' | 'historial'>('vivo')
@@ -496,18 +817,36 @@ watch(tab, (t) => {
     if (t === 'historial' && motorizados.motorizados.length === 0) motorizados.fetchAll()
 })
 
-let echo: any = null
+let echo: Echo<"reverb"> | null = null
 
 onMounted(async () => {
     await Promise.all([store.fetchAll(), negocios.fetchAll()])
     echo = useEcho()
     echo.channel('admin.despachos')
-        .listen('.despacho.actualizado', (data: any) => store.handleRealtimeUpdate(data))
+        .listen('.despacho.actualizado', (data: DespachoActualizadoPayload) => store.handleRealtimeUpdate(data))
+
+    // Reloj en vivo — sin esto, el resaltado en rojo a los 3 minutos
+    // solo se actualizaría cuando algo más recargue la página.
+    relojInterval = setInterval(() => { ahora.value = Date.now() }, 15_000)
 })
 
 onUnmounted(() => {
     try { echo?.leaveChannel('admin.despachos') } catch { /* noop */ }
+    if (relojInterval) clearInterval(relojInterval)
 })
+
+// ── Alerta visual de pedidos sin aceptar (3+ minutos) ──────
+const ahora = ref(Date.now())
+let relojInterval: ReturnType<typeof setInterval> | null = null
+
+function minutosSinAceptar(d: DespachoItem): number {
+    if (!d.solicitado_at) return 0
+    return Math.floor((ahora.value - new Date(d.solicitado_at).getTime()) / 60_000)
+}
+
+function esVencido(d: DespachoItem): boolean {
+    return d.estado === 'solicitado' && minutosSinAceptar(d) >= 3
+}
 
 function despachoLabel(s: string): string {
     const m: Record<string, string> = {

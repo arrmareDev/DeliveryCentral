@@ -151,8 +151,7 @@
                                 tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
                                         Slug (identificador único) *
                                     </label>
-                                    <input v-model="form.slug" placeholder="mi-negocio"
-                                        class="modal-input font-mono" />
+                                    <input v-model="form.slug" placeholder="mi-negocio" class="modal-input font-mono" />
                                     <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                                         Solo letras minúsculas, números y guiones
                                     </p>
@@ -168,6 +167,18 @@
                                         class="modal-input font-mono text-[12.5px]" />
                                     <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                                         URL donde se notificarán los cambios de estado de despachos
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10.5px] font-black uppercase
+                                tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                                        Dirección del negocio
+                                    </label>
+                                    <input v-model="form.direccion" placeholder="Av. Ejemplo 123, Chiclayo"
+                                        class="modal-input" />
+                                    <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                                        El punto de recojo que ve el motorizado en cada despacho
                                     </p>
                                 </div>
                             </div>
@@ -373,7 +384,7 @@ watch(sortBy, () => {
 onMounted(cargar)
 
 // ── Form crear/editar ─────────────────────────────────────
-const form = reactive({ name: '', slug: '', webhook_url: '' })
+const form = reactive({ name: '', slug: '', webhook_url: '', direccion: '' })
 
 const formModal = reactive({
     show: false, editing: null as Negocio | null, loading: false, error: '',
@@ -385,14 +396,14 @@ const canSubmit = computed(() => {
 })
 
 function openCreateModal() {
-    Object.assign(form, { name: '', slug: '', webhook_url: '' })
+    Object.assign(form, { name: '', slug: '', webhook_url: '', direccion: '' })
     formModal.editing = null
     formModal.error = ''
     formModal.show = true
 }
 
 function openEditModal(r: Negocio) {
-    Object.assign(form, { name: r.name, slug: r.slug, webhook_url: r.webhook_url ?? '' })
+    Object.assign(form, { name: r.name, slug: r.slug, webhook_url: r.webhook_url ?? '', direccion: r.direccion ?? '' })
     formModal.editing = r
     formModal.error = ''
     formModal.show = true
@@ -407,6 +418,7 @@ async function submitForm() {
         const ok = await store.update(formModal.editing.id, {
             name: form.name.trim(),
             webhook_url: form.webhook_url.trim() || null,
+            direccion: form.direccion.trim() || null,
         })
         formModal.loading = false
         if (ok) {
@@ -421,6 +433,7 @@ async function submitForm() {
             name: form.name.trim(),
             slug: form.slug.trim(),
             webhook_url: form.webhook_url.trim() || undefined,
+            direccion: form.direccion.trim() || undefined,
         })
         formModal.loading = false
         if (result.ok) {

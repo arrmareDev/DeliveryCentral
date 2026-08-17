@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
+import { isAxiosError } from "axios";
 import api from "../utils/api";
 
 export interface Negocio {
@@ -7,6 +8,9 @@ export interface Negocio {
   name: string;
   slug: string;
   webhook_url: string | null;
+  direccion: string | null;
+  lat: number | null;
+  lng: number | null;
   activo: boolean;
   total_despachos: number;
   created_at: string;
@@ -62,15 +66,18 @@ export const useNegociosStore = defineStore("negocios", () => {
     name: string;
     slug: string;
     webhook_url?: string;
+    direccion?: string;
+    lat?: number;
+    lng?: number;
   }): Promise<{ ok: boolean; data?: Negocio; message?: string }> {
     try {
       const { data } = await api.post("/admin/negocios", payload);
       return { ok: true, data: data.data };
-    } catch (e: any) {
-      return {
-        ok: false,
-        message: e.response?.data?.message ?? "Error al crear negocio",
-      };
+    } catch (e: unknown) {
+      const message = isAxiosError<{ message?: string }>(e)
+        ? (e.response?.data?.message ?? "Error al crear negocio")
+        : "Error al crear negocio";
+      return { ok: false, message };
     }
   }
 

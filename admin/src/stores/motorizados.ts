@@ -12,6 +12,8 @@ export interface MotorizadoStats {
 export interface MotorizadoItem {
   id: number;
   nombre: string;
+  nombres?: string;
+  apellidos?: string;
   telefono: string;
   email: string;
   foto: string | null;
@@ -28,6 +30,7 @@ export interface MotorizadoItem {
   anio_vehiculo?: number;
   foto_vehiculo?: string | null;
   soat_numero?: string | null;
+  created_at?: string;
 }
 
 export interface MotorizadosGlobalStats {
@@ -35,6 +38,17 @@ export interface MotorizadosGlobalStats {
   verificados: number;
   disponibles: number;
   pendientes: number;
+}
+
+// Lista liviana para el selector del modal de asignación manual —
+// no la tabla paginada completa.
+export interface MotorizadoDisponible {
+  id: number;
+  nombre: string;
+  estado: "disponible" | "ocupado" | "inactivo";
+  activos: number;
+  max: number;
+  puede_recibir: boolean;
 }
 
 export const useMotorizadosStore = defineStore("motorizados", () => {
@@ -52,6 +66,18 @@ export const useMotorizadosStore = defineStore("motorizados", () => {
     pendientes: 0,
   });
   const loading = ref(false);
+  const disponibles = ref<MotorizadoDisponible[]>([]);
+  const disponiblesLoading = ref(false);
+
+  async function fetchDisponibles() {
+    disponiblesLoading.value = true;
+    try {
+      const { data } = await api.get("/admin/motorizados/disponibles");
+      disponibles.value = data.data;
+    } finally {
+      disponiblesLoading.value = false;
+    }
+  }
 
   async function fetchAll(
     params: {
@@ -104,7 +130,10 @@ export const useMotorizadosStore = defineStore("motorizados", () => {
     meta,
     stats,
     loading,
+    disponibles,
+    disponiblesLoading,
     fetchAll,
+    fetchDisponibles,
     toggleVerificado,
     toggleActivo,
   };

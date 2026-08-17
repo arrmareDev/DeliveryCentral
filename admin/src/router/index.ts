@@ -26,6 +26,12 @@ const routes = [
         meta: { breadcrumb: "Negocios" },
       },
       {
+        path: "zonas",
+        name: "zonas",
+        component: () => import("../views/ZonasView.vue"),
+        meta: { breadcrumb: "Zonas" },
+      },
+      {
         path: "motorizados",
         name: "motorizados",
         component: () => import("../views/MotorizadosView.vue"),

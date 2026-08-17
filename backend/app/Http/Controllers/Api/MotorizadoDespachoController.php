@@ -244,6 +244,51 @@ class MotorizadoDespachoController extends Controller
         return $this->success((new DespachoResource($despacho))->resolve(), 'Estado actualizado');
     }
 
+    // GET /v1/motorizado/estadisticas?periodo=dia|semana|mes|anio
+    public function estadisticas(Request $request): JsonResponse
+    {
+        $periodo    = $request->query('periodo', 'dia');
+        $motorizado = $request->user();
+
+        [$desde, $hasta, $formatoGrupo] = match ($periodo) {
+            'semana' => [now()->startOfWeek(), now()->endOfWeek(), 'day'],
+            'mes'    => [now()->startOfMonth(), now()->endOfMonth(), 'day'],
+            'anio'   => [now()->startOfYear(), now()->endOfYear(), 'month'],
+            default  => [now()->startOfDay(), now()->endOfDay(), 'hour'],
+        };
+
+        $comisiones = ComisionMotorizado::where('motorizado_id', $motorizado->id)
+            ->whereBetween('created_at', [$desde, $hasta])
+            ->get();
+
+        $entregas = Despacho::where('motorizado_id', $motorizado->id)
+            ->where('estado', 'entregado')
+            ->whereBetween('entregado_at', [$desde, $hasta])
+            ->count();
+
+        // Desglose para la gráfica de barras — por hora si es "hoy",
+        // por día si es semana/mes, por mes si es el año completo.
+        $desglose = $comisiones
+            ->groupBy(fn($c) => match ($formatoGrupo) {
+                'hour'  => $c->created_at->format('H'),
+                'month' => $c->created_at->format('n'),
+                default => $c->created_at->format('Y-m-d'),
+            })
+            ->map(fn($grupo, $clave) => ['clave' => $clave, 'monto' => $grupo->sum('monto')])
+            ->values();
+
+        return $this->success([
+            'periodo'            => $periodo,
+            'desde'              => $desde->toDateString(),
+            'hasta'              => $hasta->toDateString(),
+            'ganancia_total'     => $comisiones->sum('monto'),
+            'ganancia_pendiente' => $comisiones->where('estado', 'pendiente')->sum('monto'),
+            'ganancia_cobrada'   => $comisiones->where('estado', 'cobrado')->sum('monto'),
+            'total_entregas'     => $entregas,
+            'desglose'           => $desglose,
+        ]);
+    }
+
     // GET /v1/motorizado/historial
     public function historial(Request $request): JsonResponse
     {

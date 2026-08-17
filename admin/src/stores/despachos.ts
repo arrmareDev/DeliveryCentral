@@ -1,7 +1,26 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
+import { isAxiosError } from "axios";
 import api from "../utils/api";
 import type { PaginationMeta } from "./negocios";
+
+// Coincide exacto con DespachoActualizado::broadcastWith() en el backend.
+export interface DespachoActualizadoPayload {
+  despacho_id: number;
+  order_id: number;
+  estado: string;
+  aceptado_at: string | null;
+  recogido_at: string | null;
+  entregado_at: string | null;
+  monto_cobrado: number | null;
+  motorizado: {
+    id: number;
+    nombre: string;
+    telefono: string;
+    lat: number | null;
+    lng: number | null;
+  } | null;
+}
 
 export interface DespachoOrder {
   client_name: string | null;
@@ -9,18 +28,30 @@ export interface DespachoOrder {
   address: string | null;
   district: string | null;
   reference: string | null;
+  subtotal?: number | null;
+  delivery_fee?: number | null;
   total: number;
   metodo_pago: string | null;
+  pagado?: boolean | null;
   lat: number | null;
   lng: number | null;
   note: string | null;
-  items: Array<{ name?: string; qty?: number }>;
+  items: Array<{
+    name?: string;
+    qty?: number;
+    unit_price?: number;
+    subtotal?: number;
+    custom_summary?: string | null;
+  }>;
 }
 
 export interface DespachoItem {
   id: number;
   negocio_id: number;
   negocio: string | null;
+  negocio_direccion?: string | null;
+  negocio_lat?: number | null;
+  negocio_lng?: number | null;
   order_id: number;
   estado: string;
   motivo_cancelacion?: string | null;
@@ -115,7 +146,26 @@ export const useDespachosStore = defineStore("despachos", () => {
     }
   }
 
-  function handleRealtimeUpdate(payload: any) {
+  async function asignar(
+    id: number,
+    motorizadoId: number,
+  ): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const { data } = await api.post(`/admin/despachos/${id}/asignar`, {
+        motorizado_id: motorizadoId,
+      });
+      const idx = activos.value.findIndex((d) => d.id === id);
+      if (idx !== -1) activos.value[idx] = data.data;
+      return { ok: true };
+    } catch (e: unknown) {
+      const message = isAxiosError<{ message?: string }>(e)
+        ? (e.response?.data?.message ?? "No se pudo asignar el pedido")
+        : "No se pudo asignar el pedido";
+      return { ok: false, message };
+    }
+  }
+
+  function handleRealtimeUpdate(payload: DespachoActualizadoPayload) {
     if (payload.estado === "entregado" || payload.estado === "cancelado") {
       activos.value = activos.value.filter((d) => d.id !== payload.despacho_id);
       stats.value.total_activos = activos.value.length;
@@ -123,10 +173,20 @@ export const useDespachosStore = defineStore("despachos", () => {
     } else {
       const idx = activos.value.findIndex((d) => d.id === payload.despacho_id);
       if (idx !== -1) {
+        // El payload del WebSocket trae lat/lng (para ubicación en vivo) pero
+        // no foto — mientras que el motorizado de DespachoItem sí la trae.
+        // Se arma el objeto explícito para no perder la foto que ya teníamos.
         activos.value[idx] = {
           ...activos.value[idx],
           estado: payload.estado,
-          motorizado: payload.motorizado ?? activos.value[idx].motorizado,
+          motorizado: payload.motorizado
+            ? {
+                id: payload.motorizado.id,
+                nombre: payload.motorizado.nombre,
+                telefono: payload.motorizado.telefono,
+                foto: activos.value[idx].motorizado?.foto ?? null,
+              }
+            : activos.value[idx].motorizado,
         };
       } else {
         fetchAll();
@@ -145,6 +205,7 @@ export const useDespachosStore = defineStore("despachos", () => {
     fetchAll,
     fetchHistorial,
     cancelar,
+    asignar,
     handleRealtimeUpdate,
   };
 });

@@ -50,6 +50,9 @@ class NegocioController extends Controller
             'name'        => 'required|string|max:150',
             'slug'        => 'required|string|max:50|unique:negocios,slug|alpha_dash',
             'webhook_url' => 'nullable|url',
+            'direccion'   => 'nullable|string|max:255',
+            'lat'         => 'nullable|numeric',
+            'lng'         => 'nullable|numeric',
         ]);
 
         $negocio = Negocio::create([
@@ -58,6 +61,9 @@ class NegocioController extends Controller
             'api_key'        => Negocio::generateApiKey(),
             'webhook_url'    => $data['webhook_url'] ?? null,
             'webhook_secret' => Str::random(40),
+            'direccion'      => $data['direccion'] ?? null,
+            'lat'            => $data['lat'] ?? null,
+            'lng'            => $data['lng'] ?? null,
             'activo'         => true,
         ]);
 
@@ -82,6 +88,9 @@ class NegocioController extends Controller
         $data = $request->validate([
             'name'        => 'sometimes|string|max:150',
             'webhook_url' => 'nullable|url',
+            'direccion'   => 'nullable|string|max:255',
+            'lat'         => 'nullable|numeric',
+            'lng'         => 'nullable|numeric',
             'activo'      => 'sometimes|boolean',
         ]);
 
@@ -121,6 +130,9 @@ class NegocioController extends Controller
             'name'            => $n->name,
             'slug'            => $n->slug,
             'webhook_url'     => $n->webhook_url,
+            'direccion'       => $n->direccion,
+            'lat'             => $n->lat,
+            'lng'             => $n->lng,
             'activo'          => $n->activo,
             'total_despachos' => $n->despachos_count ?? 0,
             'created_at'      => $n->created_at?->toISOString(),

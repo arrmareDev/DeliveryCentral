@@ -39,6 +39,7 @@ class MotorizadoResource extends JsonResource
             'anio_vehiculo'     => $this->anio_vehiculo,
             'foto_vehiculo'     => $this->foto_vehiculo ? asset('storage/' . $this->foto_vehiculo) : null,
             'soat_numero'       => $this->soat_numero,
+            'created_at'        => $this->created_at?->toISOString(),
         ];
 
         if ($this->withStats) {

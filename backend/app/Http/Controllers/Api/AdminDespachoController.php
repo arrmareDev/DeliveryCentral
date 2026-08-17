@@ -10,9 +10,11 @@ use App\Jobs\NotifyNegocioWebhook;
 use App\Models\Despacho;
 use App\Models\Motorizado;
 use App\Models\NotificacionAdmin;
+use App\Notifications\PedidoAsignadoNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 // Endpoints exclusivos del panel de administración de Central —
 // listados globales, gestión de motorizados, cancelación con motivo.
@@ -50,6 +52,99 @@ class AdminDespachoController extends Controller
                 'motorizados_disponibles' => Motorizado::where('estado', 'disponible')->count(),
             ],
         ]);
+    }
+
+    // POST /admin/despachos/{id}/asignar — el admin elige directo a qué
+    // motorizado va el pedido, sin esperar a que alguien lo acepte solo.
+    // Útil cuando nadie toma un pedido pasado cierto tiempo.
+    public function asignar(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'motorizado_id' => 'required|integer|exists:motorizados,id',
+        ]);
+
+        $maxSimultaneos = (int) config('services.motorizado.max_despachos_simultaneos', 3);
+
+        return DB::transaction(function () use ($id, $data, $maxSimultaneos) {
+            // Mismo bloqueo que aceptar() — evita que una asignación manual
+            // choque con que el propio motorizado acepte otro pedido casi
+            // al mismo tiempo.
+            $motorizado = Motorizado::where('id', $data['motorizado_id'])->lockForUpdate()->first();
+            if (!$motorizado) return $this->notFound('Motorizado no encontrado');
+
+            if (!$motorizado->verificado) {
+                return $this->error('Ese motorizado no está verificado', 422);
+            }
+
+            $despacho = Despacho::with('negocio')->where('id', $id)->lockForUpdate()->first();
+            if (!$despacho) return $this->notFound('Despacho no encontrado');
+
+            if ($despacho->estado !== 'solicitado') {
+                return $this->error('Este pedido ya no está disponible para asignar', 409);
+            }
+
+            $activosCount = Despacho::where('motorizado_id', $motorizado->id)
+                ->whereNotIn('estado', ['entregado', 'cancelado'])
+                ->count();
+
+            if ($activosCount >= $maxSimultaneos) {
+                return $this->error("Ese motorizado ya tiene {$maxSimultaneos} pedidos activos — el máximo permitido", 422);
+            }
+
+            $despacho->update([
+                'motorizado_id' => $motorizado->id,
+                'estado'        => 'aceptado',
+                'aceptado_at'   => now(),
+            ]);
+
+            if ($activosCount + 1 >= $maxSimultaneos) {
+                $motorizado->update(['estado' => 'ocupado']);
+            }
+
+            $despacho->load('motorizado', 'negocio');
+            broadcast(new DespachoActualizado($despacho));
+            NotifyNegocioWebhook::dispatch($despacho);
+
+            try {
+                $motorizado->notify(new PedidoAsignadoNotification($despacho));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            NotificacionAdmin::crear(
+                'pedido_asignado',
+                'Pedido asignado manualmente',
+                "Pedido #{$despacho->external_order_id} asignado a {$motorizado->nombre}",
+                ['despacho_id' => $despacho->id, 'motorizado_id' => $motorizado->id],
+            );
+
+            return $this->success((new DespachoResource($despacho))->resolve(), 'Pedido asignado');
+        });
+    }
+
+    // GET /admin/motorizados/disponibles — lista liviana para el selector
+    // del modal de asignación manual (no la tabla paginada completa).
+    public function motorizadosDisponibles(): JsonResponse
+    {
+        $maxSimultaneos = (int) config('services.motorizado.max_despachos_simultaneos', 3);
+
+        $motorizados = Motorizado::where('verificado', true)
+            ->where('activo', true)
+            ->orderBy('nombre')
+            ->get()
+            ->map(function ($m) use ($maxSimultaneos) {
+                $activos = $m->despachos()->whereNotIn('estado', ['entregado', 'cancelado'])->count();
+                return [
+                    'id'             => $m->id,
+                    'nombre'         => $m->nombre,
+                    'estado'         => $m->estado,
+                    'activos'        => $activos,
+                    'max'            => $maxSimultaneos,
+                    'puede_recibir'  => $activos < $maxSimultaneos,
+                ];
+            });
+
+        return $this->success($motorizados);
     }
 
     // GET /admin/motorizados

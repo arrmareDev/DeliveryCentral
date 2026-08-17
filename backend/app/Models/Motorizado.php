@@ -75,11 +75,22 @@ class Motorizado extends Authenticatable implements MustVerifyEmailContract
         return $this->hasMany(ComisionMotorizado::class);
     }
 
+    public function descuentos()
+    {
+        return $this->hasMany(DescuentoMotorizado::class);
+    }
+
     public function deudaPendiente()
     {
-        return $this->comisiones()
-            ->where('estado', 'pendiente')
-            ->sum('monto');
+        $comisiones = $this->comisiones()->where('estado', 'pendiente')->sum('monto');
+        $descuentos = $this->descuentos()->sum('monto');
+
+        return $comisiones - $descuentos;
+    }
+
+    public function zonas()
+    {
+        return $this->belongsToMany(Zona::class, 'motorizado_zona');
     }
 
     // ── Verificación de correo ──────────────────────────────

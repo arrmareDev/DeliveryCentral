@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Exports\ComisionesExport;
 use App\Exports\DespachosExport;
+use App\Exports\MotorizadosExport;
 use App\Http\Controllers\Controller;
 use App\Models\ComisionMotorizado;
 use App\Models\Despacho;
+use App\Models\Motorizado;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -14,6 +16,27 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ReportesController extends Controller
 {
+    // GET /admin/reportes/motorizados/pdf
+    public function motorizadosPdf(Request $request)
+    {
+        $motorizados = $this->consultarMotorizados($request)->get();
+
+        $pdf = Pdf::loadView('reportes.motorizados', [
+            'motorizados' => $motorizados,
+            'filtro'      => $this->labelFiltroMotorizados($request),
+            'generado'    => now()->format('d/m/Y H:i'),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('motorizados.pdf');
+    }
+
+    // GET /admin/reportes/motorizados/excel
+    public function motorizadosExcel(Request $request)
+    {
+        $motorizados = $this->consultarMotorizados($request)->get();
+
+        return Excel::download(new MotorizadosExport($motorizados), 'motorizados.xlsx');
+    }
     // GET /admin/reportes/despachos/pdf
     public function despachosPdf(Request $request)
     {
@@ -111,6 +134,51 @@ class ReportesController extends Controller
         }
 
         return $query->orderByDesc('created_at');
+    }
+
+    private function consultarMotorizados(Request $request)
+    {
+        $query = Motorizado::query();
+
+        // Mismo criterio de búsqueda y filtro que ya usa la tabla del
+        // admin — el reporte exporta justo lo que el staff está viendo.
+        if ($request->filled('buscar')) {
+            $term = $request->query('buscar');
+            $query->where(function ($q) use ($term) {
+                $q->where('nombre', 'ilike', "%{$term}%")
+                    ->orWhere('telefono', 'ilike', "%{$term}%")
+                    ->orWhere('dni', 'ilike', "%{$term}%")
+                    ->orWhere('placa', 'ilike', "%{$term}%");
+            });
+        }
+
+        $filtroEstado = $request->query('filtro_estado');
+        if ($filtroEstado === 'pendiente') {
+            $query->where('verificado', false);
+        } elseif ($filtroEstado === 'verificado') {
+            $query->where('verificado', true)->where('activo', true);
+        } elseif ($filtroEstado === 'inactivo') {
+            $query->where('verificado', true)->where('activo', false);
+        }
+
+        return $query->orderByDesc('created_at');
+    }
+
+    private function labelFiltroMotorizados(Request $request): string
+    {
+        $partes = [];
+
+        if ($request->filled('buscar')) {
+            $partes[] = "Búsqueda: \"{$request->query('buscar')}\"";
+        }
+
+        $filtroEstado = $request->query('filtro_estado');
+        $labels = ['pendiente' => 'Pendientes', 'verificado' => 'Verificados', 'inactivo' => 'Inactivos'];
+        if ($filtroEstado && isset($labels[$filtroEstado])) {
+            $partes[] = $labels[$filtroEstado];
+        }
+
+        return $partes ? implode(' · ', $partes) : 'Todos los motorizados';
     }
 
     private function labelRango(Request $request): array
