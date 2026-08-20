@@ -151,7 +151,8 @@
                                 tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
                                         Slug (identificador único) *
                                     </label>
-                                    <input v-model="form.slug" placeholder="mi-negocio" class="modal-input font-mono" />
+                                    <input v-model="form.slug" placeholder="mi-negocio"
+                                        class="modal-input font-mono" />
                                     <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                                         Solo letras minúsculas, números y guiones
                                     </p>
@@ -179,6 +180,22 @@
                                         class="modal-input" />
                                     <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                                         El punto de recojo que ve el motorizado en cada despacho
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center justify-between mb-1.5">
+                                        <span class="text-[10.5px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                            Ubicación exacta en el mapa
+                                        </span>
+                                        <span v-if="form.lat && form.lng" class="text-[10.5px] font-semibold text-green-600 dark:text-green-400">
+                                            ✓ Marcada
+                                        </span>
+                                    </label>
+                                    <div id="negocio-picker-map"
+                                        class="w-full h-52 rounded-2xl overflow-hidden border-2 border-gray-100 dark:border-gray-700 cursor-crosshair" />
+                                    <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                                        Haz clic en el mapa para marcar el punto exacto — así el motorizado navega directo, no solo por la dirección en texto.
                                     </p>
                                 </div>
                             </div>
@@ -334,7 +351,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import {
     PlusIcon, BuildingStorefrontIcon, ClipboardDocumentListIcon,
     KeyIcon, PencilIcon, PauseCircleIcon, PlayCircleIcon,
@@ -384,7 +406,10 @@ watch(sortBy, () => {
 onMounted(cargar)
 
 // ── Form crear/editar ─────────────────────────────────────
-const form = reactive({ name: '', slug: '', webhook_url: '', direccion: '' })
+const form = reactive({
+    name: '', slug: '', webhook_url: '', direccion: '',
+    lat: null as number | null, lng: null as number | null,
+})
 
 const formModal = reactive({
     show: false, editing: null as Negocio | null, loading: false, error: '',
@@ -396,14 +421,17 @@ const canSubmit = computed(() => {
 })
 
 function openCreateModal() {
-    Object.assign(form, { name: '', slug: '', webhook_url: '', direccion: '' })
+    Object.assign(form, { name: '', slug: '', webhook_url: '', direccion: '', lat: null, lng: null })
     formModal.editing = null
     formModal.error = ''
     formModal.show = true
 }
 
 function openEditModal(r: Negocio) {
-    Object.assign(form, { name: r.name, slug: r.slug, webhook_url: r.webhook_url ?? '', direccion: r.direccion ?? '' })
+    Object.assign(form, {
+        name: r.name, slug: r.slug, webhook_url: r.webhook_url ?? '', direccion: r.direccion ?? '',
+        lat: r.lat, lng: r.lng,
+    })
     formModal.editing = r
     formModal.error = ''
     formModal.show = true
@@ -419,6 +447,8 @@ async function submitForm() {
             name: form.name.trim(),
             webhook_url: form.webhook_url.trim() || null,
             direccion: form.direccion.trim() || null,
+            lat: form.lat ?? undefined,
+            lng: form.lng ?? undefined,
         })
         formModal.loading = false
         if (ok) {
@@ -434,6 +464,8 @@ async function submitForm() {
             slug: form.slug.trim(),
             webhook_url: form.webhook_url.trim() || undefined,
             direccion: form.direccion.trim() || undefined,
+            lat: form.lat ?? undefined,
+            lng: form.lng ?? undefined,
         })
         formModal.loading = false
         if (result.ok) {
@@ -446,6 +478,75 @@ async function submitForm() {
         }
     }
 }
+
+// ── Mapa selector de ubicación ──────────────────────────────
+// Centro por defecto en Chiclayo — la mayoría de los negocios de
+// este sistema operan ahí. Si el negocio ya tenía lat/lng (al
+// editar), centra en ese punto en vez del default.
+const CHICLAYO_CENTER: [number, number] = [-6.7714, -79.8409]
+
+let pickerMap: L.Map | null = null
+let pickerMarker: L.Marker | null = null
+
+function colocarMarcador(latlng: L.LatLng) {
+    form.lat = latlng.lat
+    form.lng = latlng.lng
+    if (pickerMarker) {
+        pickerMarker.setLatLng(latlng)
+    } else if (pickerMap) {
+        pickerMarker = L.marker(latlng, { draggable: true }).addTo(pickerMap)
+        pickerMarker.on('dragend', () => colocarMarcador(pickerMarker!.getLatLng()))
+    }
+}
+
+function initPickerMap() {
+    const el = document.getElementById('negocio-picker-map')
+    if (!el) return
+
+    delete (L.Icon.Default.prototype as any)._getIconUrl
+    L.Icon.Default.mergeOptions({
+        iconUrl: markerIcon,
+        iconRetinaUrl: markerIcon2x,
+        shadowUrl: markerShadow,
+    })
+
+    if (pickerMap) { pickerMap.remove(); pickerMap = null; pickerMarker = null }
+
+    const tieneUbicacion = form.lat !== null && form.lng !== null
+    const center: [number, number] = tieneUbicacion ? [form.lat!, form.lng!] : CHICLAYO_CENTER
+
+    pickerMap = L.map('negocio-picker-map', { center, zoom: tieneUbicacion ? 16 : 13 })
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19,
+    }).addTo(pickerMap)
+
+    if (tieneUbicacion) {
+        pickerMarker = L.marker([form.lat!, form.lng!], { draggable: true }).addTo(pickerMap)
+        pickerMarker.on('dragend', () => colocarMarcador(pickerMarker!.getLatLng()))
+    }
+
+    pickerMap.on('click', (e: L.LeafletMouseEvent) => colocarMarcador(e.latlng))
+
+    // El modal todavía puede estar animando su entrada cuando esto
+    // corre — sin esto, Leaflet a veces calcula mal el tamaño y el
+    // mapa sale cortado o gris hasta que se hace resize manual.
+    setTimeout(() => pickerMap?.invalidateSize(), 150)
+}
+
+function destroyPickerMap() {
+    if (pickerMap) { pickerMap.remove(); pickerMap = null; pickerMarker = null }
+}
+
+watch(() => formModal.show, async (show) => {
+    if (show) {
+        await nextTick()
+        initPickerMap()
+    } else {
+        destroyPickerMap()
+    }
+})
 
 // ── Modal API Key ──────────────────────────────────────────
 const keyModal = reactive({ show: false, negocio: null as Negocio | null })
