@@ -35,6 +35,9 @@ class PedidoDisponible implements ShouldBroadcast
         return [
             'id'                  => $this->despacho->id,
             'negocio'             => $this->despacho->negocio?->name,
+            'negocio_direccion'   => $this->despacho->negocio?->direccion,
+            'negocio_lat'         => $this->despacho->negocio?->lat,
+            'negocio_lng'         => $this->despacho->negocio?->lng,
             'order_id'            => $this->despacho->external_order_id,
             'estado'              => $this->despacho->estado,
             'comision_motorizado' => (float) $this->despacho->comision_motorizado,
